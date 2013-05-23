@@ -7,7 +7,7 @@
 # tag : chef ohai
 # date   : 2013-05-23
 # update : 2013-05-23
-# version: 0.1.0
+# version: 0.1.1
 # history:
 #   0.1.0: 初版
 
@@ -25,7 +25,7 @@ Debian 6 では以下の手順でインストールします。
   $ sudo apt-get update
   $ sudo apt-get install curl
   $ curl -L https://www.opscode.com/chef/install.sh | sudo bash
-  $ ohhai --version
+  $ ohai --version
   Ohai: 6.16.0
 
 == プラグインの追加
