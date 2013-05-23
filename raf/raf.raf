@@ -1,12 +1,15 @@
-# creator : がりん <garin54@gmail.com>
-# date   : 2011-02-26
-# update : 2011-04-10
-# description: raf は作業手順/マニュアル向けの軽量マークアップ言語です
+# creator : garin <garin54@gmail.com>
+# publisher: garin.jp
 # language: ja
 # rights: (c) 2011 garin.jp
-# version: 0.1.0
-# publisher: garin.jp
+# license: CC BY-SA 3.0
+# description: raf は作業手順/マニュアル向けの軽量マークアップ言語です
 # tag : raf
+# date   : 2011-02-26
+# update : 2011-04-10
+# version: 0.1.0
+
+
 = raf ドキュメントフォーマット
 
 == はじめに
@@ -637,6 +640,8 @@ raf の箇条書きには「記号付き」と「番号付き」の2種類があ
   バージョン番号
 :revision
   リビジョン番号
+:license
+  ライセンス表記
 
 ++ メタデータの入力例
 メタはファイルの先頭に記述します。先頭以外の場合は通常のコメントとして扱われてしまいます。
