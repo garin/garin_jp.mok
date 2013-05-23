@@ -1,0 +1,134 @@
+# creator : がりん <garin54@gmail.com>
+# publisher: garin.jp
+# language: ja
+# rights: (c) 2013 garin.jp
+# license: CC BY-SA 3.0
+# description: ohai のプラグインを作成する
+# tag : chef ohai
+# date   : 2013-05-23
+# update : 2013-05-23
+# version: 0.1.0
+# history:
+#   0.1.0: 初版
+
+= ohai のプラグインを作成する
+
+== 概要
+((<ohai|https://github.com/opscode/ohai>)) はマシンの環境(プラットフォーム・ネットワーク・カーネル・プロセス・ホスト等)の情報を取得するためのコマンドラインツールです。
+ここでは ohai に独自のプラグインを追加して使用する方法を紹介します。
+
+== インストール
+ohai は環境設定ツールの chef と一緒に配布されています。
+Debian 6 では以下の手順でインストールします。
+
+  $ export LC_ALL=C
+  $ sudo apt-get update
+  $ sudo apt-get install curl
+  $ curl -L https://www.opscode.com/chef/install.sh | sudo bash
+  $ ohhai --version
+  Ohai: 6.16.0
+
+== プラグインの追加
+
+=== プラグインの作成
+/etc/ohai/plugins ディレクトリを作成しプラグインを記述します。
+
+
+  $ sudo mkdir -p /etc/ohai/plugins
+  $ cd /etc/ohai/plugins
+
+  $ sudo vi myplugin.rb
+  provides "myplugin"            # プラグイン名の指定。ohai はこの名前でデータを生成する
+  myplugin "hello my plugin."    # プラグインの出力
+
+=== プラグインの確認
+ohai コマンドから作成したプラグインの情報を取得するには -d(--directory) オプションでプラグインを検索するディレトリを追加します。
+これでプラグインの作成はおわりです。
+
+  $ ohai -d /etc/ohai/plugins | grep myplugin
+    "myplugin": "hello my plugin.",
+
+== Ruby コード
+プラグインファイルは RubyDSL なので chef のレシピと同じように Ruby のコードが記述できます。
+  $ cd /etc/ohai/plugins
+  $ sudo vi jikan.rb
+  provides "jikan"     # プラグイン名
+  jikan    Time.now    # Ruby のコードを記述
+
+上記のプラグインの出力を確認します。Ruby のコード Time.now が実行され現在の時刻が取得できます。
+
+  $ ohai -d /etc/ohai/plugins | grep jikan
+    "jikan": "2013-05-23 20:25:46 +0900",
+
+== 複数の値を使う
+1つのプラグインで複数の値を保持するには Mash(Hash のようなRubyのコレクションクラス)を使用します。
+
+  $ cd /etc/ohai/plugins
+  $ sudo vi fukusu.rb
+  provides "fukusu"
+  fukusu Mash.new
+  fukusu[:ichi] = "saisyo"
+  fukusu[:ni]   = "nikome"
+
+確認すると複数の値を持っていることがわかります。
+
+  $ ohai -d /etc/ohai/plugins | grep fukusu -A 2
+  "fukusu": {
+    "ichi": "saisyo",
+    "ni": "nikome"
+
+== chef-solo のレシピで使う
+=== 設定
+ohai のプラグインを読み込めるように chef-solo の設定ファイルの先頭に「((<プラグインの作成>))」でプラグインを設置したディレクトリ名を指定します。
+
+  $ sudo vi /etc/chef/solo.rb
+  Ohai::Config[:plugin_path] << '/etc/ohai/plugins'
+
+=== chef レシピ
+chef のレシピやテンプレート内では node['プラグイン名'] で呼び出します。
+以下の例ではテンプレートに更新時刻を追加しています。
+
+  $ cd /path/to/cookbook/templates
+  $ sudo vi update.txt.erb
+  update time : <%= node['jikan'] %>
+
+== サーバにプライベートな情報を取得する ohai プラグイン
+chef-solo にはサーバ上にあるプライベートな情報を取得する仕組みがありません。
+このプラグインを使うと、サーバ上の MySQL のパスワード等の情報を YAML ファイルに保存してき、chef-solo のレシピからそれらの情報を取得することができます。
+
+  $ cd /etc/ohai/plugins
+  $ vi private.rb
+
+++ /etc/ohai/plugins/private.rb
+  #!/usr/bin/enb ruby
+  require 'yaml'
+  # プライベートな情報を記述しておくファイル
+  PRIVATE_FILE="/etc/chef/private.yaml"
+  items = YAML.load_file( PRIVATE_FILE )
+
+  provides "private"
+  private Mash.new
+
+  items.each do |key,val|
+    private[key] = val
+  end
+
+プライベートファイルは YAML ですが、単純な key:value 形式のみに対応してしています。
+
+  // プライベートファイルの作成
+  # sudo vi /etc/chef/private.yaml
+  mysql_root_password: himituNoPass
+
+  // root 以外からは読めないようにパーミッションを設定
+  # chmod 600 /etc/chef/private.yaml
+
+chef のレシピから値を読み取るには node['private']['キー'] を指定します。
+
+  $ cd /path/to/cookbook/templates
+  $ sudo vi database.conf.erb
+  host : localhost
+  user : root
+  password : <%= node['private']['mysql_root_password'] %>  # private.yaml の himituNoPass が挿入される
+
+== 参考 URL
+* ((<公式の Ohai 解説|http://docs.opscode.com/ohai.html#create-ohai-plugins>))
