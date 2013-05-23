@@ -1,0 +1,35 @@
+# creator : 我燐(がりん) <garin54@gmail.com>
+# date : 2011-04-04
+# update : 2011-04-04
+# rights: (c) 2011 garin.jp
+# version: 1.0.0
+# publisher: garin.jp
+# tag : tips shell
+= ファイルの拡張子を変更する
++ シェルのパラメータ展開を使う
+シェルコマンド(bash,zsh)のパラメータ展開($)とパターン削除(%)機能を使うと簡単に拡張子を変更できます。
+% は最短一致なので最後の拡張子部分にだけ適用されます(下の例では aaa.txt.txt が aaa.txt.doc になります)。
+
+++ 拡張子が .txt のファイルの拡張子を全て .doc に変更する
+  // 変更前
+  $ ls
+  01.txt 02.txt aaa.txt.txt bbb.html ccc.jpg
+
+  // カレントディレクトリにあるファイルの拡張子を変更(.txt → .doc)
+  $ for n in *
+  > do
+  > mv $n ${n%.txt}.doc
+  > done
+
+  // 変更後
+  $ ls
+  01.doc 02.doc aaa.txt.doc bbb.html ccc.jpg
+
++ renameコマンドを使う
+ディストリビューションによっては rename というコマンドが提供されています。
+rename コマンドと使うとより簡単に拡張子を変更できます。
+
+++ rename で .jpeg はたは .JPG ファイルを .jpg に変換する
+
+  $ rename 's/\.jpe?g$/.jpg/i' *
+
