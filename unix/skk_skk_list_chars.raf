@@ -1,0 +1,38 @@
+# creator : がりん <garin54@gmail.com>
+# date   : 2011-05-21
+# update : 2011-05-21
+# language: ja
+# rights: (c) 2011 garin.jp
+# version: 1.0.0
+# publisher: garin.jp
+# tag : skk emacs
+
+= SKK の skk-list-chars を停止する
++ SKK の skk-list-chars を停止する
+Emacs 上で動作する日本語入力プログラム ((<SKK|http://openlab.jp/skk/index-j.html>)) で漢字を入力するには、通常、SHIFTキーを押して変換入力モード(skk-set-henkan-point-subr;以下、▽モード)に入り変換したい文字を入力します(((<skkマニュアル:▽モード|http://openlab.jp/skk/skk-manual/skk-manual-ja_4.html#SEC27>)))。
+しかし、私はこの▽モードを起動するためのキーを、IRIE Tetsuya氏の作成した((<skk-sticky-key|http://mail.ring.gr.jp/skk/200801/msg00005.html>)) を使って、SHIFTではなく「\(バックスラッシュ)」 に割り振っています。
+
+skk-sticky-keyで▽モードに入るためのキーを「\」に割り振っておくと、通常の入力方法である SHIFT キーのようなホームポジションから遠くにあるキーを小指で押さなくてすむので(([私の環境では xmodmap で ; と \ を入れ変えているのでホームポジションのまま▽モードに入れます]))とても便利です。
+
+しかし、困った点が1つあります。
+
+▽モードに入った後で、誤って「\」キーを押してしまうと、キーコード表から文字を入力する skk-list-chars(([DDSKK 14.2 以降 skk-input-by-code-or-menu が skk-list-chars という名前が変わっています。]))が起動し、以下のような入力メニュー画面になっています(赤枠内が skk-list-chars)。
+
+(($/images/skk_list_chars.png$))
+
+この状態になってしまうと「q」キーを押して skk-list-chars モードを終了しないといけません。しかし、skk-list-chars モードを終了すると Emacs のウィンドウ分割情報が破棄されてしまいます。もし、複数にウィンドウを分割して作業をしていた場合には、その分割情報が失なわれ、ウィンドウが1つだけになりとても不便です。
+
+この「▽モードで"\"キーを押す」というのは私がよくやってしまうミスなのですが、skk-list-chars のメニューから文字をコードが文字を入力する機能はほとんど使ったことがありません。
+そこで、.emacs 以下のコードを追加し、もし skk-list-chars を実行してもコードメニュー画面が起動しないようにしました。
+
+++ ~/.emacs
+  (defun skk-list-chars (&optional arg)
+    (interactive "P")
+    ;; skk-list-chars が呼ばれた時点で元の▽モードが終了してしまうので、再度▽モードを呼び出す
+    (skk-set-henkan-point-subr)
+    )
+
+これでもし、「"\"」を▽コード押してしまっても、▽モードのまま入力が続けられます。
+
+
+((*※注意※*)) この設定をすると、当然ですが skk-list-chars が起動しなくなります(([正確には起動した後、何もしないで終了する]))。現在の DDSKK 14.2 では skk-input-by-code-or-menu 関数を呼び出すことで同様の機能が使えますが、こんご使えなくなる可能性もあります。もし、コードメニューでの文字入力が必要な方は上記のコードを設定しないでください。

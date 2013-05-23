@@ -1,0 +1,19 @@
+# creator : 我燐(がりん) <garin54@gmail.com>
+# date : 2011-04-04
+# update : 2011-04-04
+# rights: (c) 2011 garin.jp
+# version: 1.0.0
+# publisher: garin.jp
+# tag : tips unix
+= ユーザを一時的にロックする
+
+usermod コマンドを使うと、ユーザ情報を削除しないで一時的にロックできます。
+
+  // ユーザのロック
+  // /etc/shadow のパスワードカラムの先頭に「!」が付いてパスワードログインができなくなる。
+  // ただし root で su するとそのユーザになれる
+  $ usermod -L username
+
+  // アンロック
+  // ロック前のパスワードでログインできるようになる
+  $ usermod -U username
