@@ -1,20 +1,20 @@
 # creator : 我燐(がりん) <garin54@gmail.com>
 # date : 2009-12-06
-# update : 2013-05-21
+# update : 2013-05-27
 # rights: (c) 2009 garin.jp
-# version: 1.0.1
+# version: 1.1.0
 # publisher: garin.jp
 # tag : linux mlterm xclip screen firefox
 = X Window System のコピー&ペースト環境を統一する
 #update : 2010-01-31
 == 概要
 === 目的
-XX Window System 上で動作する「Emacs」「mlterm+screen」「Firefox」の3つのアプリケーション(([Emacs・mlterm+screen・Firefoxはがりんの三大常用アプリケーションです。これらがなければ生活できません]))間で自由に文字列のコピー&ペーストが出来る環境を目指します。
+X Window System 上の "Emacs", "mlterm(+screen)", "Firefox" の3つのアプリケーション(([Emacs ・ mlterm+screen ・ Firefox はがりんの三大常用アプリケーションです。これらがなければ生活できません]))の間で文字列のコピーとペースト(貼り付け)ができるようにします。
 
 
 === 何が問題か?
-X Window System には 文字列のコピー&ペースト として「セクション」と呼ばれる機能を提供しています(([もうひとつ、カットバッファという機能もありますが、X10からの機能の為、時代送れであり今回の環境では使用しないので割愛]))。
-セクションは PRIMARY、SECONDARY、CLIPBOARD の3つのバッファ(入れ物)が用意されていた、それぞれのバッファが独立して文字列の出し入れ(コピー&ペースト)ができるようになっています。
+X Window System には 文字列のコピー&ペースト として「セクション」と呼ばれる機能を提供しています(([もうひとつ、カットバッファという機能もありますが、X10 からの機能の為、時代送れであり今回の環境では使用しないので割愛]))。
+セクションは PRIMARY、SECONDARY、CLIPBOARD の3つのバッファ(入れ物)が用意されていて、それぞれのバッファが独立して文字列の出し入れ(コピー&ペースト)ができるようになっています。
 
 この「それぞれが独立して」というのが問題になります。
 なぜなら、PRIMARY に保存(コピー)した文字列は、PRIMARY から取り出す(ペースト)する機能を持つアプリケーションからしか利用できません。
@@ -27,12 +27,12 @@ X Window System には 文字列のコピー&ペースト として「セクシ�
 + デフォルトのコピー&ペーストのセクション
 | *アプリケーション* | *コピー方法*                         | *コピーセクション*   | *ペースト方法*             | *ペーストセクション* |
 | x window system    | マウスの左ボタンを押しながらドラッグ | PRIMARY              | マウスの真ん中ボタン       | PRIMARY              |
-| emacs              | copy-region-as-kill等                | 独自バッファ         | yank等                     | 独自バッファ         |
+| emacs              | copy-region-as-kill 等                | 独自バッファ         | yank 等                     | 独自バッファ         |
 | mlterm + screen    | copy(screen) なし(mlterm)            | 独自バッファ(screen) | paste(screen) なし(mlterm) | 独自バッファ(screen) |
 | firefox            | コピー等                             | PRIMARY CLIPBOARD    | 貼り付け等                 | CLIPBOARD            |
 
 かなりバラバラになっていることがわかると思います。
-このままの状態だと、「X Window System でコピーした(マウスでドラッグした)文字列をFirefoxでペースト(貼り付け)」等を実行する事ができません(PRIMARY にコピーした内容は CLIPBOARD からは取り出せないですよね)。
+初期の状態では「X Window System でコピーした(マウスでドラッグした)文字列を Firefox の貼り付けコマンドでペースト」を実行する事ができません(PRIMARY にコピーした内容は CLIPBOARD からは取り出せないですよね)。
 又、emacs や screen は独自のコピー&ペースト用のバッファを使用しているため、ほかのアプリケーションへペーストする機能を提供していません。
 これらの問題を解決し、各アプリケーションでコピー&ペーストできるようにするのが今回の目的です。
 
@@ -40,7 +40,7 @@ X Window System には 文字列のコピー&ペースト として「セクシ�
 いくつか改善する方法はあると思いますが、今回は以下のような方針で改善案を考えました。
 
 * 独自バッファは使用しない(([改善後も独自バッファに入力した内容は独自バッファを持つアプリケーションでは利用可能です。emacs で kill-ring が使用できなくなったりすることはありません]))
-* コピーする時は必ずPRIMARYには保存する(PRIMARY が must、CLIPBOARD が should です)
+* コピーする時は必ず PRIMARY には保存する(PRIMARY が must、CLIPBOARD が should です)
 * PRIMARY の内容は自動で CLIPBOARD にもコピーする
 * ペーストは PRIMARY、CLIPBOARD のどちらかを利用する(どちらでも可)
 
@@ -48,25 +48,27 @@ X Window System には 文字列のコピー&ペースト として「セクシ�
 最終的に以下の表のようなセクションになり、常に PRIMARY と CLIPBOARD のバッファが同じ内容の文字列を共有するようになります。
 
 | *アプリケーション* | *コピーセクション*                         | *ペーストセクション* |
-| x window syste     | PRIMARY(自動でCLIPBOARDにもコピー)         | PRIMARY              |
+| x window syste     | PRIMARY(自動で CLIPBOARD にもコピー)         | PRIMARY              |
 | emacs              | PRIMARY CLIPBOARD                          | CLIPBOARD            |
-| mlterm + screen    | PRIMARY(screen)(自動でCLIPBOARDにもコピー) | PRIMARY(mlterm)      |
+| mlterm + screen    | PRIMARY(screen)(自動で CLIPBOARD にもコピー) | PRIMARY(mlterm)      |
 | firefox            | PRIMARY CLIPBOARD                          | CLIPBOARD            |
 
 
 改善前と比べてだいぶ統一されています。
 ただし、コピーは全て PRIMARY に保存されますが、ペーストは CLIPBOAD を利用するアプリーケーションがります。
-そこで、PRIMARYの内容をCLIPBOARDにコピーする以下のスクリプトを作成します(後述)。
-
-* primary_to_clipboard_daemon.rb
-* primary_to_clipboard.rb
+そこで、PRIMARY の内容を CLIPBOARD にコピーする以下のスクリプトを作成します(後述)。
 
 == 更新履歴
+:2013-05-27
+  * primary_to_clipboard.rb を ruby + xclip から ruby + gtk2 に変更
+    * primary_to_clipboard_daemon.rb が不要になった
+    * 実行時間が1/4になった
+
 :2010-01-30
   * 「セクション内容共有スクリプト」を修正
     * xclip のゾンビが大量に発生する問題を修正
     * セッション共有の状態を監視する primary_to_clipboard_daemon.rb を追加
-  * 「セクション内容共有スクリプト」の対象とするRubyのバージョンを 1.8.7 から 1.9.1 に変更
+  * 「セクション内容共有スクリプト」の対象とする Ruby のバージョンを 1.8.7 から 1.9.1 に変更
 :2009-12-06
   初稿
 
@@ -79,7 +81,7 @@ X Window System には 文字列のコピー&ペースト として「セクシ�
 
 === Emacs
 Emacs の kill-ring の内容をセッションにコピーする機能を使います。
-~/.emacs に以下の設定を追加します。コピーしたものは独自バッファ(kill-ring)と PRIMARY と CLIPBOARD の3ヶ所に保存し、ペースト(([Emacsの用語で言えばヤンク]))は CLIPBOARD から行います。
+~/.emacs に以下の設定を追加します。コピーしたものは独自バッファ(kill-ring)と PRIMARY と CLIPBOARD の3ヶ所に保存し、ペースト(([Emacs の用語で言えばヤンク]))は CLIPBOARD から行います。
 
 ++ ~/.emacs
   ;; コピーした内容を PRIMARY,CLIPBOARD セクションにもコピーする
@@ -88,21 +90,18 @@ Emacs の kill-ring の内容をセッションにコピーする機能を使い
 
   ;; C-y で CLIPBOARD の内容をペースト(ヤンク)する
   ;; クリップボードの内容を kill-ring に追加してからヤンクします
-  ;; kill-ringに新しい内容を追加するとそちらが優先されます
+  ;; kill-ring に新しい内容を追加するとそちらが優先されます
   (cond (window-system (global-set-key "\C-y" 'x-clipboard-yank)))
 
-
-
 === mlterm + screen
-
-screenでコピーした独自バッファ(ペーストバッファ)を PRIMARY にコピーするには、ブログ記事 『[(((memo))) screen から簡単操作で X のクリップボードにコピー](http://d.hatena.ne.jp/emacsjjj/20050717/p1)』を参考に ~/.screenrc に以下のような設定を追加します。
+screen でコピーした独自バッファ(ペーストバッファ)を PRIMARY にコピーするには、ブログ記事 『[(((memo))) screen から簡単操作で X のクリップボードにコピー](http://d.hatena.ne.jp/emacsjjj/20050717/p1)』を参考に ~/.screenrc に以下のような設定を追加します。
 この設定を使用するには ((<xclip|http://sourceforge.net/projects/xclip/>)) が必要です。
 
 ++ ~/.screenrc
   # ペーストバッファを保存するファイル
   bufferfile $HOME/.screen_exchange
 
-  # ペーストバッファをPRIMARYにコピー
+  # ペーストバッファを PRIMARY にコピー
   bindkey -m ' ' eval 'stuff \040' writebuf 'exec !!! xclip -in -selection primary $HOME/.screen_exchange'
   bindkey -m 'y' eval 'stuff y' writebuf 'exec !!! xclip -in -selection primary $HOME/.screen_exchange'
   bindkey -m 'Y' eval 'stuff Y' writebuf 'exec !!! xclip -in -selection primary $HOME/.screen_exchange'
@@ -116,104 +115,103 @@ mlterm で PRIMARY の内容をペーストできるように INSERT_SELECTION �
 
 これで、独自バッファ(ペーストバッファ)と PRIMARY にコピーし、PRIMARY をペーストするようになります。
 
-=== firefox
+=== Firefox
 得に設定は必要ありません。
 デフォルトの設定で、PRIMARY と CLIPBOARD にコピーし、CLIPBOARD の内容をペーストします。
 
 == セクション内容共有スクリプト
-上記の設定でコピーした内容は必ずPRIMARYに保存されるようになりました。しかし、CLIPBOARD には保存されない場合があります(([X Window System と screen のコピーは PRIMARYにしか保存されません]))。
-このままでは、ペーストに CLIPBOARD を使用する Emacs と Firefox でうまくペーストができません。
-そこで、PRIMARY の内容が変更されたら自動的で CLIPBOARD にも同じ内容をコピーするスクリプト「primary_to_clipboard.rb」と左記のスクリプトを起動し正しく動作しているかを監視する「primary_to_clipboard_daemon.rb」を作成します。
+ここまでの設定でコピーした内容は必ず PRIMARY セクションに保存されるようになりました。しかし、CLIPBOARD には保存されないケースがいくつかあります(([X Window System と screen のコピーは PRIMARY にしか保存されません]))。
+そのためこのままでは、ペーストに CLIPBOARD を使用する Emacs と Firefox でうまくペーストができません。
+そこで、PRIMARY の内容が変更されたら自動的で CLIPBOARD にも同じ内容をコピーするスクリプト「primary_to_clipboard.rb」を作成します。
 
-このスクリプトの実行には ((<Ruby1.9.1|http://www.ruby-lang.org/ja/>))以上 と ((<xclip|http://sourceforge.net/projects/xclip/>)) が必要です。
-
-++ primary_to_clipboard_daemon.rb
-  #!/usr/bin/env ruby
-  PRIMARY_TO_CLIPBOARD="/home/yoshino/bin/primary_to_clipboard.rb"
-  while true
-    `#{PRIMARY_TO_CLIPBOARD}`
-    STDERR.puts "#{PRIMARY_TO_CLIPBOARD} exited and restart."
-  end
+このスクリプトの実行には ((<Ruby1.9.1|http://www.ruby-lang.org/ja/>)) と gtk2 の Ruby 用ライブラリが必要です。
 
 ++ primary_to_clipboard.rb
+
   #!/usr/bin/env ruby
-  require 'timeout'
-  # primaryの内容を保存するファイル
-  @exchange_file="/home/yoshino/.primary_exchange"
+  # -*- coding: utf-8 -*-
+  # X Window System の Selection Primary の内容が変更されたら Selection Clipboard に格納する
+  #
+  # == 必須パッケージ
+  #   # gem install gtk2
+  #
+  # == 履歴
+  # 2.0.0:
+  # * gtk2 ライブラリを使用
+  # * 外部コマンド(xclip)への依存を削除
+  # * 共有データの保存先をファイルからメモリに変更
+  #   * 1.0と比べて CPU 利用率が1/4に低下
+  #
+  # 1.0.0:
+  # * 初期バージョン
+  require 'kconv'
+  require 'gtk2'
+  require 'optparse'
 
-  # primary_to_clipboard の重複起動チェック
-  if `ps aux`.lines.find_all{ |item| item =~ /#{File.basename __FILE__}/}.size >= 2
-    puts "already running"
-    exit 1
+  # @wait_time 変数は廃止
+  # 変数の置き換えは処理が重いのでメイン loop 内では使わないでハードコーディングする
+  # @wait_time = 0.1
+
+  @primary   = Gtk::Clipboard.get(Gdk::Selection::PRIMARY)
+  @clipboard = Gtk::Clipboard.get(Gdk::Selection::CLIPBOARD)
+  @share     = @clipboard.wait_for_text
+
+  loop do
+    primarydata = @primary.wait_for_text
+    if primarydata != @share && ! primarydata.nil?
+      puts "primary changed" if $DEBUG
+      @share = primarydata.toutf8
+      @clipboard.clear.text = @share
+      @clipboard.store
+    end
+    puts "s: #{@share} - p:#{@primary.wait_for_text} - c:#{@clipboard.wait_for_text}" if $DEBUG
+    sleep 0.1                     # @wait_time
   end
 
-  @primary_old = nil
-  while true
-    # 稀にxclipの値が取得できない事がある
-    # 取得できなかった場合は例外で終了する
-    begin
-      timeout(1){ @primary_now=%x(xclip -o -selection primary) }
-    rescue Timeout::Error
-      p "#{Time.now} : #{$!}" if $DEBUG
-      retry
-    end
+ファイルを作成したら適当なパスに配置し、実行権限を与えます。
 
-    # primaryの値が変更されていたらclipboardに内容をコピーする
-    unless @primary_old == @primary_now
-      open(@exchange_file, "w") do |f| f.print @primary_now  end
-      system("xclip","-i", "-selection", "clipboard", @exchange_file)
-      @primary_old = @primary_now.dup
-      #p @primary_now if $DEBUG
-    end
-    sleep 0.1
-  end
+  $ sudo cp primary_to_clipboard.rb /usr/bin/primary_to_clipboard.rb
+  $ chmox +x /usr/bin/primary_to_clipboard.rb
 
-スクリプトのファイルを作成したら適当なパスに配置し、実行権限を与えます。
+このスクリプトはコピー&ペーストが必要な間はシステムに常駐させておく必要があります。
+わたしは ~/.xinitrc に以下の行を追加して X Window System の起動時に自動で実行するようにしています。
 
-  $ sudo cp primary_to_clipboard_daemon.rb
-  $ sudo cp primary_to_clipboard.rb /usr/local/bin/primary_to_clipboard.rb
-
-  $ chmox +x /usr/local/bin/primary_to_clipboard_daemon.rb
-  $ chmox +x /usr/local/bin/primary_to_clipboard.rb
-
-このスクリプトはコピー&ペーストが必要な間は常駐しておく必要があります。
-がりんは ~/.xinitrc に以下の行を追加して X Window System の起動時に自動で実行するようにしています。
 ++ ~/.xinitrc
-  primary_to_clipboard_daemon.rb &
+  primary_to_clipboard.rb &
 
 ※ xdm や gdm 等のディスプレイマネージャを使用している場合は、~/.xinitrc を読み込まないようです。
 
-== 使い方
-単一のアプリケーション内であればこれまでと得に変わりません。
-Emacs のカレントバッファでコピーしたものを別のバッファにヤンクしたり、Firefox の URLバーでコピーした URL をブログのフォームに貼るなど、同じ操作方法がそのまま使えます。
+=== 使い方
+1つのアプリケーション内であればこれまでと変わりません。
+Emacs のカレントバッファでコピーしたものを別のバッファにヤンクしたり、Firefox の URL バーでコピーした URL をブログのフォームに貼るなど、同じ操作方法がそのまま使えます。
 
-設定をし上記スクリプトを起動している(primary_to_clipboard_daemon.rb)を起動している間は、それに加えてその使い方を他のアプリケーション間でも利用する事ができるようになります。
-Emacs のカレントバッファでコピーした URL を、Firefox の URLバーにペーストしたり、screen でコピーしたコマンドの出力結果を Emacs にコピーして編集したり、透過的になったコピー&ペーストを楽しみましょう。
+設定をし primary_to_clipboard.rb を起動しているをしている間は、通常の使い方に加えて他のアプリケーション間でも文字列を共有することができます。
+Emacs のカレントバッファでコピーした URL を、Firefox の URL バーに貼り付けたり、screen でコピーしたコマンドの出力結果を Emacs にコピーして編集したり、透過的になったコピー&ペーストを楽しみましょう。
 
-=== 今セクションに何が入っているか？
+== チップス
+=== X Window System のセクションに今、何が保存されているか?
 アプリケーションのどれかでコピー処理を行うと、他のアプリケーションのペーストで利用できるようになるため、「今セクションのバッファに何が入っているのか?」がわからなくなってしまう事があると思います。
 そんな時は xclip コマンドを使用してセクションの中身を確認出来ます。
 
-  // PRIMARYの内容
+  // PRIMARY の内容
   $ xclip -o -selection primary
   abcdef
 
-  // CLIPBOARDの内容
+  // CLIPBOARD の内容
   $ xclip -o -selection clipboard
   abcdef
 
 ※設定が正しく完了していれば、両方の内容が常に同じになるはずです。
 
-== 改善後の問題点
+
+== 既存の問題点
 ここまでの作業で X Window System と「Emacs」「mlterm+screen」「Firefox」の間でコピー&ペーストができるようになりました。
-しかし、以下の問題点がまだ残っています。
+ただし、以下の問題点がまだ残っています。
 
-+ コピー開始からセクション全部(PRIMARY,CLIPBOARD)に伝搬するまでのタイムラグ
+=== コピー開始からセクション全部(PRIMARY,CLIPBOARD)に伝搬するまでのタイムラグ
 primary_to_clipboard.rb と screen の改善策ではコピーをしてから全てのセクションで同じ内容をペーストできるようになるまで 0.1〜0.2秒程度のタイムラグ(時差)が発生してしまいます。
-そのため、screenでコピーした瞬間にEmacsでペーストすると、screenでコピーした内容がCLIPBOARD(([EmacsはCLIPBOARDをペーストする]))に伝搬されていないため、意図した内容とは別の内容がペーストされる場合があります。
+そのため、screen でコピーした瞬間に Emacs でペーストすると、screen でコピーした内容が CLIPBOARD(([Emacs は CLIPBOARD をペーストする]))に伝搬されていないため、意図した内容とは別の内容がペーストされる場合があります。
 
-これは screenのコピーでは比較的時間のかかるコマンド呼び出し処理、primary_to_clipboard.rb では定期的なチェック(0.1秒毎)を行っているためです。
-この問題の解決にはそれぞれのアプリケーション側の修正が必要なため(([screenやX Window System にPRIMARYとCLIPBOARDの両方に内容をコピーする機能があればいい]))現状では「一息置いてからペーストする」という運用でカバーしています。
+これは screen のコピーでは比較的時間のかかるコマンド呼び出し処理、primary_to_clipboard.rb では定期的なチェック(0.1秒毎)を行っているためです。
+この問題の解決にはそれぞれのアプリケーション側の修正が必要なため(([screen や X Window System に PRIMARY と CLIPBOARD の両方に内容をコピーする機能があればいい]))現状では「一息置いてからペーストする」という運用でカバーしています。
 何事にもゆっくり行う余裕が必要ということですね:-p
-
-
