@@ -1,0 +1,219 @@
+# creator : がりん <garin54@gmail.com>
+# publisher: garin.jp
+# language: ja
+# rights: (c) 2013 garin.jp
+# license: CC BY-SA 3.0
+# description: Debain 6.0 で gitlab4.0 を 4.2にアップデートする手順
+# tag : gitlab
+# date   : 2013-05-30
+# update : 2013-05-30
+# version: 0.1.0
+# history:
+#   0.1.0: 初版
+
+= Debian 6 で GitLab 4.0 を 4.2 にアップデートする手順
+
+== 目的
+Debian 6(squeeze) + Apache で稼動している GitLab 4.0 を GitLab 4.2 にアップデートします。
+公式ドキュメントにも ((<4.0-to-4.1|https://github.com/gitlabhq/gitlabhq/blob/master/doc/update/4.0-to-4.1.md>))と((<4.1-to-4.2|https://github.com/gitlabhq/gitlabhq/blob/master/doc/update/4.1-to-4.2.md>))の手順が存在しますが、Debian 6 ではバックポートでパッケージをインストールしなければいけないなどいくつかの追加作業があります。
+
+新規に GitLab インストールするには、((<公式のインストールドキュメント|https://github.com/gitlabhq/gitlabhq/blob/master/doc/install/installation.md>)) を確認してください。
+
+
+== 事前準備
+
+GitLab は比較的新しいバージョンのソフトウェアを要求します。
+そのため、Ruby, Git(([GitLab ではなくコマンドラインの Git])), redis(([sidekiq が使用する key-value DB])) は Debian 6 の標準パッケージではなく、ソースコードや Debian 7.0 (Weezhy) からのバックポートを使って新しいバージョンをインストールします。
+
+=== ruby-1.9.3 のインストール
+Ruby-1.9.3 をソースコードからインストールします。
+公式ドキュメントでは ruby1.9.3-p327 になっていますが、その後、5月14日に ruby-1.9.3-p429 のパッチリリースが公開されているので、こちらをインストールします。
+
+  // 現在のバージョンの確認
+  $ ruby -v
+  ruby 1.9.2p290 (2011-07-09 revision 32553) [x86_64-linux]
+
+  // ruby-1.9.3 をインストール
+  $ mkdir /tmp/ruby && cd /tmp/ruby
+  $ curl --progress ftp://ftp.ruby-lang.org/pub/ruby/1.9/ruby-1.9.3-p429.tar.bz2 | tar xj
+  $ cd ruby-1.9.3-p429
+  $ ./configure && make && sudo make install
+
+  // インストール後のバージョンを確認
+  $ ruby -v
+  ruby 1.9.3p392 (2013-02-22 revision 39386) [i686-linux]
+
+  // Apache を再起動
+  $ sudo /etc/init.d/apache2 restart
+
+
+=== バックポート版 git のインストール
+Debian 7 から Deiban 6 へのバックポートサービスを使って git の新しいバージョンをインストールします。
+Debian のバックポートサービスについては((<http://backports.debian.org/>))を参照してください。
+
+  // 現在バージョンを確認
+  # git --version
+  git version 1.7.2.5
+
+  // バックポート版の git をインストール
+  # vi /etc/apt/sources.list
+  deb http://ftp.de.debian.org/debian-backports squeeze-backports main
+
+  # apt-get update
+  # apt-get -t squeeze-backports install git
+
+  // インストールしたバージョンを確認
+  # git --version
+  git version 1.7.10.4
+
+
+=== バックポート版 redis のインストール
+git と同様に redis も新しいバージョンをインストールします。
+# sidekiq 用 (4.1からバックエンドプロセスが Resque が Sidekiq に変更になった)
+
+  # apt-get -t squeeze-backports install redis-server
+
+
+== GitLab 4.0 から4.1 へのアップデート
+公式のアップデート手順: ((<https://github.com/gitlabhq/gitlabhq/blob/master/doc/update/4.0-to-4.1.md>))
+GitLab 4.0 から 4.1 へのアップデートは公式ドキュメントの通りに進めていけばほぼスムーズに完了します。
+
+=== 4.0 → 4.1 の主な変更点
+公式のリリースノート: ((<http://blog.gitlab.org/gitlab-4-1-released/>))
+
+* ruby1.9.3-p327 が必須に
+* バックエンドプロセスが Resque から Sidekiq に変更
+
+* コメントシステムが改善された
+* git リポジトリをだれでも閲覧できる公開リポジトリにする設定の追加
+* ダンシュボードのフィルタをクッキーに保存
+
+=== GitLab と Resque の停止
+稼動中の gitlab と reqsue のプロセスを停止します。
+
+  # service gitlab stop
+
+環境によっては、起動スクリプトでうまく停止できない場合があるようです。その場合は kill コマンドで停止してください。
+
+=== GitLab のアップデート / DB マイグレート
+最新の gitlab ソースを取得し、パッケージのインストールとデータベースのマイグレートを実施します。
+
+  // gitlab のソースディレクトリに移動
+  $ cd /home/gitlab/gitlab/
+
+  // gitlab-4.1 のソースを取得
+  # sudo -u gitlab -H git fetch
+  # sudo -u gitlab -H git checkout 4-1-stable
+
+  // bundle コマンドでパッケージをインストール(MySQL 用)
+  # sudo -u gitlab -H bundle install --without development test postgres
+
+  // DB のマイグレーション
+  # sudo -u gitlab -H bundle exec rake db:migrate RAILS_ENV=production
+
+=== init.d スクリプトを置き換える
+init.d スクリプト 4.1 のものに置き換えます。
+
+  // 旧バージョンンの init スクリプトをバックアップ
+  $ sudo mv /etc/init.d/gitlab /etc/init.d/gitlab.old
+
+  // 新しい init スクリプトをダウンロードして実行権限を付加します
+  # sudo curl --output /etc/init.d/gitlab https://raw.github.com/gitlabhq/gitlab-recipes/4-1-stable/init.d/gitlab
+  # sudo chmod +x /etc/init.d/gitlab
+
+=== GitLab のステータス確認
+GitLab の状態確認用のスクリプトを起動します。
+ここで問題があれば、スクリプトに表示される指示に従って修正してください。
+
+  # sudo -u gitlab -H bundle exec rake gitlab:check RAILS_ENV=production
+
+=== init スクリプトの起動
+
+init スクリプトを実行すると gitlab プロセスと sidekiq のプロセスが起動します。
+
+  // init スクリプトの起動
+  # sudo service gitlab start
+
+  // プロセスの確認
+  # ps aux | grep gitlab
+  gitlab   12980  0.1  3.1 1122824 122736 ?   Sl   09:28   1:04 sidekiq 2.6.4 gitlab [0 of 25 busy]
+  gitlab   13093  0.0  3.1 892020 124280 ?       Sl   09:29   0:15 Rails: /home/gitlab/gitlab
+
+=== バックアップした旧 init スクリプトを削除します
+  # sudo rm /etc/init.d/gitlab.old
+
+=== Apache の再起動
+
+  # /etc/init.d/apache2 restart
+
+=== 確認
+ブラウザから gitlab の動作を確認します。
+
+== GitLab 4.1 から 4.2 へのアップデート
+公式のアップデート手順: https://github.com/gitlabhq/gitlabhq/blob/master/doc/update/4.1-to-4.2.md
+
+=== 主な変更点
+公式のリリースノート: ((<http://blog.gitlab.org/gitlab-v4-dot-2-has-been-released/>))
+
+* チーム(複数のユーザを1つにまとめる)の追加
+* ユーザのページ(/u/$uesrname)の追加
+* プロジェクトページ(/dashboard/projects)の追加
+
+
+===  起動中の gitlab と sidekiq のプロセスを停止します
+  # service gitlab stop
+
+=== GitLab のアップデート / DB マイグレート
+
+  // gitlab のソースディレクトリに移動
+  # cd /home/gitlab/gitlab/
+
+  //   DB マイグレートの時に更新された schema.rb の変更を破棄
+  # git checkout db/schema.rb
+
+  // gitlab-4.1 のソースを取得
+  # sudo -u gitlab git checkout 4-2-stable
+
+  // bundle コマンドでパッケージをインストール(MySQL 用)
+  # sudo -u gitlab bundle install --without development test postgres --deployment
+
+  // DB のマイグレーション
+  # sudo -u gitlab bundle exec rake db:migrate RAILS_ENV=production
+
+=== init.d スクリプトを置き換える
+なし
+
+=== GitLab のステータス確認
+  # sudo -u gitlab -H bundle exec rake gitlab:check RAILS_ENV=production
+
+=== GitLab の起動
+init スクリプトで gitlab と sidekiq を起動し、Apache を再起動します。
+
+  # sudo service gitlab start
+  # /etc/init.d/apache2 restart
+
+=== 確認
+ブラウザから gitlab の動作を確認します。
+
+== トラブルシューティング
+
+=== 500 We're sorry, but something went wrong.
+ブラウザでアクセスすると「500 We're sorry, but something went wrong.」が表示されることがあります。
+さまざまな原因が考えられますが、以下で解決するかもしません。
+
+* Apache を再起動する
+* gitlab と sidekiq のプロセスを kill して init スクリプトを再実行する
+
+=== Background Jobs の sidekiq が動作しない
+
+* sidekiq のプロセスが動作していない
+  * gitlab の init スクリプトを実行して sidekiq のプロセスを起動する
+* redis-server が 2.4.15 になっていない
+  * ((<バックポート版 redis のインストール>))を参考に redis-server 2.4.15 をインストールする
+
+
+== 参考 URL
+
+* gitolite:((<https://github.com/sitaramc/gitolite>))
+* sidekiq:((<http://mperham.github.io/sidekiq/>))
+* redis:((<http://redis.io/>))
