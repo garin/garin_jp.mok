@@ -7,27 +7,26 @@
 # tag : gitlab
 # date   : 2013-05-30
 # update : 2013-05-30
-# version: 0.1.0
+# version: 0.1.1
 # history:
 #   0.1.0: 初版
+#   0.1.1: 文言修正
 
 = Debian 6 で GitLab 4.0 を 4.2 にアップデートする手順
 
 == 目的
 Debian 6(squeeze) + Apache で稼動している GitLab 4.0 を GitLab 4.2 にアップデートします。
-公式ドキュメントにも ((<4.0-to-4.1|https://github.com/gitlabhq/gitlabhq/blob/master/doc/update/4.0-to-4.1.md>))と((<4.1-to-4.2|https://github.com/gitlabhq/gitlabhq/blob/master/doc/update/4.1-to-4.2.md>))の手順が存在しますが、Debian 6 ではバックポートでパッケージをインストールしなければいけないなどいくつかの追加作業があります。
+公式ドキュメントにも ((<4.0-to-4.1|https://github.com/gitlabhq/gitlabhq/blob/master/doc/update/4.0-to-4.1.md>))と((<4.1-to-4.2|https://github.com/gitlabhq/gitlabhq/blob/master/doc/update/4.1-to-4.2.md>))の手順が存在しますが、Debian 6 ではバックポートでパッケージをインストールしなければならない等いくつかの追加作業があります。
 
 新規に GitLab インストールするには、((<公式のインストールドキュメント|https://github.com/gitlabhq/gitlabhq/blob/master/doc/install/installation.md>)) を確認してください。
 
 
 == 事前準備
-
 GitLab は比較的新しいバージョンのソフトウェアを要求します。
-そのため、Ruby, Git(([GitLab ではなくコマンドラインの Git])), redis(([sidekiq が使用する key-value DB])) は Debian 6 の標準パッケージではなく、ソースコードや Debian 7.0 (Weezhy) からのバックポートを使って新しいバージョンをインストールします。
+そのため、Ruby, Git(([GitLab ではなくコマンドラインの Git])), redis(([sidekiq が使用する key-value DB])) は Debian 6 の標準パッケージではなく、ソースコードや Debian のバックポートサービス を使って新しいバージョンをインストールします。
 
 === ruby-1.9.3 のインストール
 Ruby-1.9.3 をソースコードからインストールします。
-公式ドキュメントでは ruby1.9.3-p327 になっていますが、その後、5月14日に ruby-1.9.3-p429 のパッチリリースが公開されているので、こちらをインストールします。
 
   // 現在のバージョンの確認
   $ ruby -v
@@ -44,21 +43,23 @@ Ruby-1.9.3 をソースコードからインストールします。
   ruby 1.9.3p392 (2013-02-22 revision 39386) [i686-linux]
 
   // Apache を再起動
-  $ sudo /etc/init.d/apache2 restart
-
+  # /etc/init.d/apache2 restart
 
 === バックポート版 git のインストール
+Debian のバックポートサービスは Debian testing(不安定版)のパッケージを stable(安定版)で使えるように調整・再コンパイルして提供しています(([Debian のバックポートサービスについては((<http://backports.debian.org/>))を参照してください]))。
+
 Debian 7 から Deiban 6 へのバックポートサービスを使って git の新しいバージョンをインストールします。
-Debian のバックポートサービスについては((<http://backports.debian.org/>))を参照してください。
+
 
   // 現在バージョンを確認
   # git --version
   git version 1.7.2.5
 
-  // バックポート版の git をインストール
+  // バックポート用のリポジトリを追加
   # vi /etc/apt/sources.list
   deb http://ftp.de.debian.org/debian-backports squeeze-backports main
 
+  // バックポート版の git をインストール
   # apt-get update
   # apt-get -t squeeze-backports install git
 
@@ -69,14 +70,16 @@ Debian のバックポートサービスについては((<http://backports.debia
 
 === バックポート版 redis のインストール
 git と同様に redis も新しいバージョンをインストールします。
-# sidekiq 用 (4.1からバックエンドプロセスが Resque が Sidekiq に変更になった)
 
   # apt-get -t squeeze-backports install redis-server
+  # redis-server --version
+  2.4.15
 
 
-== GitLab 4.0 から4.1 へのアップデート
+== GitLab 4.0 から 4.1 へのアップデート
 公式のアップデート手順: ((<https://github.com/gitlabhq/gitlabhq/blob/master/doc/update/4.0-to-4.1.md>))
-GitLab 4.0 から 4.1 へのアップデートは公式ドキュメントの通りに進めていけばほぼスムーズに完了します。
+
+上記の事前準備が正しく完了していれば、GitLab 4.0 から 4.1 へのアップデートは公式ドキュメントの通りに進めていけばほぼスムーズに完了します。
 
 === 4.0 → 4.1 の主な変更点
 公式のリリースノート: ((<http://blog.gitlab.org/gitlab-4-1-released/>))
@@ -87,9 +90,10 @@ GitLab 4.0 から 4.1 へのアップデートは公式ドキュメントの通�
 * コメントシステムが改善された
 * git リポジトリをだれでも閲覧できる公開リポジトリにする設定の追加
 * ダンシュボードのフィルタをクッキーに保存
+* blame用のラインナンバーを追加
 
 === GitLab と Resque の停止
-稼動中の gitlab と reqsue のプロセスを停止します。
+起動中の gitlab と reqsue のプロセスを停止します。
 
   # service gitlab stop
 
@@ -112,14 +116,14 @@ GitLab 4.0 から 4.1 へのアップデートは公式ドキュメントの通�
   # sudo -u gitlab -H bundle exec rake db:migrate RAILS_ENV=production
 
 === init.d スクリプトを置き換える
-init.d スクリプト 4.1 のものに置き換えます。
+init.d スクリプトを 4.1 のものに置き換えます。
 
   // 旧バージョンンの init スクリプトをバックアップ
-  $ sudo mv /etc/init.d/gitlab /etc/init.d/gitlab.old
+  # mv /etc/init.d/gitlab /etc/init.d/gitlab.old
 
   // 新しい init スクリプトをダウンロードして実行権限を付加します
-  # sudo curl --output /etc/init.d/gitlab https://raw.github.com/gitlabhq/gitlab-recipes/4-1-stable/init.d/gitlab
-  # sudo chmod +x /etc/init.d/gitlab
+  # curl --output /etc/init.d/gitlab https://raw.github.com/gitlabhq/gitlab-recipes/4-1-stable/init.d/gitlab
+  # chmod +x /etc/init.d/gitlab
 
 === GitLab のステータス確認
 GitLab の状態確認用のスクリプトを起動します。
@@ -140,7 +144,7 @@ init スクリプトを実行すると gitlab プロセスと sidekiq のプロ�
   gitlab   13093  0.0  3.1 892020 124280 ?       Sl   09:29   0:15 Rails: /home/gitlab/gitlab
 
 === バックアップした旧 init スクリプトを削除します
-  # sudo rm /etc/init.d/gitlab.old
+  # rm /etc/init.d/gitlab.old
 
 === Apache の再起動
 
@@ -161,6 +165,7 @@ init スクリプトを実行すると gitlab プロセスと sidekiq のプロ�
 
 
 ===  起動中の gitlab と sidekiq のプロセスを停止します
+
   # service gitlab stop
 
 === GitLab のアップデート / DB マイグレート
@@ -181,19 +186,21 @@ init スクリプトを実行すると gitlab プロセスと sidekiq のプロ�
   # sudo -u gitlab bundle exec rake db:migrate RAILS_ENV=production
 
 === init.d スクリプトを置き換える
-なし
+GitLab 4.1 と同じスクリプトを使用するので作業はなし。
 
 === GitLab のステータス確認
+
   # sudo -u gitlab -H bundle exec rake gitlab:check RAILS_ENV=production
 
 === GitLab の起動
+
 init スクリプトで gitlab と sidekiq を起動し、Apache を再起動します。
 
   # sudo service gitlab start
   # /etc/init.d/apache2 restart
 
 === 確認
-ブラウザから gitlab の動作を確認します。
+ブラウザから GitLab の動作を確認します。
 
 == トラブルシューティング
 
