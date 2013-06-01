@@ -11,7 +11,7 @@
 # history:
 #   0.1.0: 初版
 
-= Debian6 で gitlab 4.0 を 5.2 までアップデートする
+= Debian6 で gitlab 4.2 を 5.2 までアップデートする
 == 概要
 Debian 6(squeeze) + Apache + LDAP 認証の環境で稼動している GitLab 4.2 を GitLab 5.2 にアップデートします。
 
