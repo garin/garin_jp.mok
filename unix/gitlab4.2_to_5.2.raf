@@ -16,7 +16,7 @@
 Debian 6(squeeze) + Apache + LDAP 認証の環境で稼動している GitLab 4.2 を GitLab 5.2 にアップデートします。
 
 == 事前準備
-以前の記事、「((<Debian6 で gitlab 4.0 を 5.2 までアップデートする|http://garin.jp/doc/unix/gitlab4.0_to_4.2>))」の「((<事前準備|http://garin.jp/doc/unix/gitlab4.0_to_4.2#raf-head2-3>))」を参考に、以下のミドルウェアのバージョンをインストールします。
+以前の記事、「((<Debian6 で gitlab 4.0 を 4.2 までアップデートする|http://garin.jp/doc/unix/gitlab4.0_to_4.2>))」の「((<事前準備|http://garin.jp/doc/unix/gitlab4.0_to_4.2#raf-head2-3>))」を参考に、以下のミドルウェアのバージョンをインストールします。
 
 * ruby: ruby-1.9.3-p429
 * git: 1.7.10.4
