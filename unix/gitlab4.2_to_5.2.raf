@@ -1,0 +1,412 @@
+# creator : がりん <garin54@gmail.com>
+# publisher: garin.jp
+# language: ja
+# rights: (c) 2013 garin.jp
+# license: CC BY-SA 3.0
+# description: Debain 6.0 で gitlab4.2 を 5.2にアップデートする手順
+# tag : gitlab
+# date   : 2013-06-01
+# update : 2013-06-01
+# version: 0.1.0
+# history:
+#   0.1.0: 初版
+
+= Debian6 で gitlab 4.0 を 5.2 までアップデートする
+== 概要
+Debian 6(squeeze) + Apache + LDAP 認証の環境で稼動している GitLab 4.2 を GitLab 5.2 にアップデートします。
+
+== 事前準備
+以前の記事、「((<Debian6 で gitlab 4.0 を 5.2 までアップデートする|http://garin.jp/doc/unix/gitlab4.0_to_4.2>))」の「((<事前準備|http://garin.jp/doc/unix/gitlab4.0_to_4.2#raf-head2-3>))」を参考に、以下のミドルウェアのバージョンをインストールします。
+
+* ruby: ruby-1.9.3-p429
+* git: 1.7.10.4
+* redis-server: 2.4.15
+
+== GitLab 4.2 から 5.0 へのアップデート
+公式のアップデート手順: ((<https://github.com/gitlabhq/gitlabhq/blob/master/doc/update/4.2-to-5.0.md>))
+
+=== 主なシステム上の変更点
+このバージョンから git の構成が大きく変更になっています。
+以下に主なものをあげます。
+
+==== gitolite から gitlab-shell への移行
+gitolite は サーバ上の Git リポジトリの追加や削除・ユーザの管理など、GitLab のバックエンドとしてさまざまな Git に関する処理を行ってきました(([gitolite は単体で複数の git リポジトリやユーザを管理する機能を持ちます]))。
+5.0以降では gitolite に変わって GitLab プロジェクト製の gitlab-shell というスクリプトの集りがサーバ上の Git リポジトリやユーザの管理などのバックエンドを実行します。
+
+==== git/gitlab ユーザから git ユーザへの統合
+上記の通りこれまでは gitolite が Git リポジトリ等の管理を行っていたため、サーバには gitolite(バックエンド)用に git ユーザと、GitLab(フロントエンド)用の gitlab ユーザという2つのユーザアカウントが必要でした。
+5.0以降では、どちらも GitLab がうけもつことになり、「git」ユーザのみを使うようになります(注:git ユーザを廃止して gitlab ユーザに統合ではなく、gitlab ユーザを廃止して git ユーザに統合されます)。
+
+==== HTTP サーバが gitlab バンドルの unicorn に変更
+HTTP サーバが gitlab にバンドルされるようになりました。
+これまで Apache+passenger や nginx+passenger のように、HTTP サーバ+Passenger を経由して GitLab にアクセスしていたものが、Apache や nginx は unicorn のリバースプロキシとしてアクセスするようになります。
+(※GitLab5.1 から unicorn に変わって puma という HTTP サーバがバンドルされています)
+
+==== Git リポジトリへのシンボリックリンクのサポート廃止
+これまで、Git のリポジトリを保存しておく /home/git/repositories はシンボリックリンクでも問題なく動作しました。
+たとえば、Git リポジトリの本体を /opt/myteam/gits に置き、/home/git/repositories にシンボリックリンクを張るといった運用が可能でした。しかし、5.0以降ではシンボリックリンクは非サポートになったため、Git リポジトリを標準(/home/git/repositories)とは別の場所にする場合は、設定ファイルを変更するか bind mount を使用します(bind mount を使った手順を後で説明します)。
+
+==== Wiki ページが DB 保存から git リポジトリに変更
+これまで、プロジェクト毎の wiki は MySQL などのデータベースに保存されていましたが、5.0以降では、GitHub 製の wiki エンジン Gollum に変更になりました。
+
+((*注意*))
+GitLab4.2 から5.0のアップデート手順に wiki のマイグレートコマンドが記載されています。
+しかし、「((*日本語を含むマルチバイド文字を含む wiki ページをうまくマイグレートできません*))」。
+  // wiki のマイグレート
+  # sudo -u git -H bundle exec rake gitlab:wiki:migrate RAILS_ENV=production
+  // 以下のエラーが発生してマイグレートできない
+  incompatible character encodings: UTF-8 and ASCII-8BIT
+
+以下の GitLab の issues で議論されていますが、2013/06/01 時点では解決していないようです。
+((<https://github.com/gitlabhq/gitlabhq/issues/3312>))
+
+また、「((*マイグレートコマンドを実施すると wiki のテーブル(wikis)が削除*))」されます。
+現状では日本語を含む wiki ページは事前にバックアップしておき、5.0にアップデート後に手動で再度書き込むのがいいと思います。
+
+=== バックアップ
+データベース・ Git リポジトリ・ GitLab ソースコードを事前にバックアップしておきます。
+特にデータベースは GitLab4.2 から5.0のマイグレート時は削除されるテーブルが存在するのでバックアップすることを強くおすすめします。
+
+=== gitlab の停止
+  # service gitlab stop
+
+私の環境では init スクリプトからうまく停止できなかったので、手動で gitlab と sidekiq のプロセスを探して kill しました。
+  # ps aux | grep gitlab
+  gitlab   22889  0.0  3.0 886948 118748 ?       Sl   May31   0:01 Rails: /home/gitlab/gitlab
+  gitlab   31085  0.1  3.1 1108020 123292 ?      Sl   May31   2:15 sidekiq 2.6.4 gitlab [0 of 25 busy]
+
+  # kill 22889 31085
+
+=== git ユーザに bash コマンドを追加
+git ユーザのログインシェルを bash に変更します。
+
+  # chsh -s /bin/bash git
+
+また、git ユーザの ~/.profile に gitlab-shell 用にパスを追加します。
+
+  # vi /home/git/.profile
+  PATH=$PATH:/home/git/bin
+  export PATH
+
+
+=== Git リポジトリのシンボリックリンクから bind mount への変更
+もし Git リポジトリのディレクトリをシンボリックリンクにしている場合は、以下の手順で bind mount に変更します。
+(ここでは Git リポジトリを/opt/myteam/gits に置いているものとします)
+
+   // git ユーザに
+   $ sudo su git
+
+   // シンボリックリンクの削除
+   $ cd /home/git
+   $ rm -f repositories
+
+   // マウント用のディレクトリの作成
+   $ mkdir repositories
+
+   // bind mount でマウント
+   $ su -
+   # cd /home/git
+   # mount --bind /opt/myteam/gits repositories
+
+   // fstab に追加
+   # vi /etc/fstab
+   /opt/myteam/gits repositories                none    bind            0 0
+
+※バーミッションの設定は後の「((<gitlab-shell のセットアップ>))」で行います。
+
+=== gitlab-shell のコードを取得
+  # cd /home/git/
+  # sudo -u git -H git clone https://github.com/gitlabhq/gitlab-shell.git /home/git/gitlab-shell
+
+=== gitlab-shell のセットアップ
+  // git リポジトリの所有者を git ユーザに変更
+  # chown git:git -R /home/git/repositories
+
+  // git ユーザとしてログイン
+  # su git
+
+  // gitlab-shell をチェックアウト
+  $ cd /home/git/gitlab-shell
+  $ git checkout v1.2.0
+
+==== 設定ファイルの編集
+
+  $ cp config.yml.example config.yml
+  $ vi config.yml
+
+  // gitlab へのパス
+  // Apache をリバースプロキシとして使う場合は、デフォルトではなく unicorn のポートを指定する
+  // gitlab_url: "https://example.git.com/"
+  gitlab_url: "http://127.0.0.1:3000/"     # unicorn は 3000/tcp でリッスンする
+
+  // hooks の書き換え
+  $ ./support/rewrite-hooks.sh
+
+  // git ユーザから抜ける
+  $ exit
+
+=== gitlab ソースコードの移動
+サーバ上のユーザを git ユーザに統合するため、GitLab のソースコードを /home/gitlab/gitlab から /home/git/gitlab に移動します。
+
+  # mv /home/gitlab/gitlab /home/git/gitlab
+  # chown git:git -R /home/git/gitlab
+
+  // もし、存在するなら以下のファイルを削除します。
+  # rm /tmp/gitlab.socket
+
+=== GitLab のソースコードを5.0に更新
+  # cd /home/git/gitlab
+
+  // 現在の設定をバックアップ
+  # sudo -u git -H cp config/gitlab.yml config/gitlab.yml.old
+
+  # sudo -u git -H git fetch
+  # git checkout db/schema.rb    # GitLab4.1 → 4.2 にアップデートしている場合は変更されているので、変更を破棄する
+  # sudo -u git -H git checkout 5-0-stable
+
+==== gitlab の設定
+
+  // 新しい gitlab の設定ファイルのコピー
+  # sudo -u git -H cp config/gitlab.yml.example config/gitlab.yml
+
+  // GitLab4.2 で LDAP 認証を行っていた場合は古い設定ファイルを削除する
+  # rm /home/git/gitlab/config/initializers/omniauth.rb
+
+  // 設定ファイルの編集
+  # sudo -u git -H vim config/gitlab.yml
+  gitlab:
+    ## Web server settings
+    host: gitlab.example.com      # サイトの URL
+    port: 443                     # SSL を使う場合
+    https: true                   # SSL を使う場合
+    email_from: gitlab@gitlab.example.com
+    support_email: gitlab@gitlab.example.com
+    default_projects_limit: 100
+
+  ## LDAP の設定は omniauth.rb からこの gitlab.yml に移動
+  ldap:
+    enabled: true
+    host: 'localhost'
+    base: 'dc=example,dc=com'
+    port: 389
+    uid: 'uid'
+    method: 'plain' # "ssl" or "plain"
+
+=== バンドルインストール・ DB マグレーション
+
+  # sudo -u git -H bundle install --without development test postgres --deployment
+  # sudo -u git -H bundle exec rake db:migrate RAILS_ENV=production
+  # sudo -u git -H bundle exec rake gitlab:shell:setup RAILS_ENV=production
+
+  # sudo -u git -H bundle exec rake gitlab:shell:build_missing_projects RAILS_ENV=production
+
+  # sudo -u git -H mkdir /home/git/gitlab-satellites
+  # sudo -u git -H bundle exec rake gitlab:satellites:create RAILS_ENV=production
+
+wiki のマイグレーションは実行しない(((<Wiki ページが DB 保存から git リポジトリに変更>))参照)
+
+=== 新しい charlock_holmes のインストール
+charlock_holmes ライブラリの 0.6.8 が存在すると以下のエラーが発生します。
+((<https://github.com/gitlabhq/gitlabhq/issues/679#issuecomment-5282141>))
+既存の 0.6.8 を削除して charlock_holmes-0.6.9.4 をインストールします。
+
+  # cd /home/git/gitlab
+  # rm -rf ./vendor/bundle/ruby/1.9.1/gems/charlock_holmes-0.6.8
+  # rm ./vendor/bundle/ruby/1.9.1/cache/charlock_holmes-0.6.8.gem
+  # rm ./vendor/bundle/ruby/1.9.1/specifications/charlock_holmes-0.6.8.gemspec
+
+  # rm /usr/local/lib/ruby/gems/1.9.1/gems/charlock_holmes-0.6.8/lib/charlock_holmes.rb
+
+  sudo gem install charlock_holmes --version '0.6.9.4'
+
+=== ファイル権限の変更
+
+  // /home/git/.ssh
+  sudo -u git -H chmod 700 /home/git/.ssh
+  sudo -u git -H chmod 600 /home/git/.ssh/authorized_keys
+
+  # /home/git/gitlab/
+  sudo chown -R git /home/git/gitlab/log/
+  sudo chown -R git /home/git/gitlab/tmp/
+  sudo chmod -R u+rwX  /home/git/gitlab/log/
+  sudo chmod -R u+rwX  /home/git/gitlab/tmp/
+  sudo -u git -H mkdir /home/git/gitlab/tmp/pids/
+  sudo chmod -R u+rwX  /home/git/gitlab/tmp/pids
+
+=== init スクリプトのアップデート
+
+  # rm /etc/init.d/gitlab
+  # curl --output /etc/init.d/gitlab https://raw.github.com/gitlabhq/gitlab-recipes/5-0-stable/init.d/gitlab
+  # chmod +x /etc/init.d/gitlab
+
+=== gitlab インスタンスの起動
+GitLab の init スクリプトを実行して gitlab,unicorn,sidekiq を起動します。
+  # service gitlab start
+
+=== gitlab の確認
+  // gitlab-shell の確認
+  # sudo -u git -H /home/git/gitlab-shell/bin/check
+
+  # Example of success output
+  # Check GitLab API access: OK
+  # Check directories and files:
+  #         /home/git/repositories: OK
+  #         /home/git/.ssh/authorized_keys: OK
+
+
+  // gitlab の確認
+  sudo -u git -H bundle exec rake gitlab:check RAILS_ENV=production
+
+
+=== Apache の設定変更
+GitLab5.0 以降は Apache をリバースプロキシとして動作させます。
+web サーバは unicorn が3000/tcp で待機している。
+
+
+  // proxy_http のモジュールを有効に
+  # a2enmod proxy proxy_http
+
+  # cd /etc/apache2/conf.d
+  # vi gitlab.conf
+
+  <VirtualHost *:443>
+      ServerName gitlab.example.com
+
+  # passenger の設定をコメントアウト
+  #    DocumentRoot /home/gitlab/gitlab/public/
+  #    RailsBaseURI /
+  # 以下の3行を追加
+    ProxyPass / http://127.0.0.1:3000/
+    ProxyPassReverse / http://127.0.0.1:3000/
+    ProxyPreserveHost On
+  ...
+
+
+  // Apache を再起動
+  # /etc/init.d/apache2 restart
+
+=== 確認
+ブラウザから gitlab の動作を確認します。
+
+== GitLab5.0 から 5.1 へのアップデート
+公式のアップデート手順: ((<https://github.com/gitlabhq/gitlabhq/blob/master/doc/update/5.0-to-5.1.md>))
+
+=== 主なシステム上の変更点
+* バンドルの HTTP サーバが unicorn から puma に変更
+
+===  gitlab の停止
+  # service gitlab stop
+
+
+=== gitlab-shell を更新
+  # cd /home/git/gitlab-shell
+  # sudo -u git -H git fetch
+  # sudo -u git -H git checkout v1.3.0
+
+  # セットアップスクリプトを実行
+  # sudo -u git -H ./bin/install
+
+
+===  GitLab のソースコードを5.1に更新
+  # cd /home/git/gitlab
+  # sudo -u git -H git fetch
+  # sudo -u git -H git checkout db/schema.rb
+  # sudo -u git -H git checkout 5-1-stable
+
+
+=== バンドルインストール・ DB マイグレート
+
+  # cd /home/git/gitlab
+  # sudo rm tmp/sockets/gitlab.socket  # もし存在していれば
+
+  // バンドルインストール
+  # sudo -u git -H bundle install --without development test postgres --deployment
+
+  // マイグレート
+  # sudo -u git -H bundle exec rake db:migrate RAILS_ENV=production
+  # sudo -u git -H bundle exec rake migrate_merge_requests RAILS_ENV=production
+
+=== バンドル HTTP の設定
+GitLab5.1 からバンドルの HTTP サーバが unicon から puma に変更になりました。
+unicorn 用の設定を puma 用の設定に変更します。
+
++ puma の設定
+  # cd /home/git/gitlab
+  # sudo -u git -H cp config/puma.rb.example config/puma.rb
+  # vi config/puma.rb
+  // Apache から接続できるように待受ポートを UNIX ソケットから9292/tcp に変更
+  bind 'tcp://0.0.0.0:9292'
+  #bind "unix://#{application_path}/tmp/sockets/gitlab.socket"
+
++ gitlab-shell の設定
+ポートを3000から9292に変更
+  # /home/git/gitlab-shell
+  # vi config.yml
+  # gitlab_url: "http://127.0.0.1:3000/"
+  gitlab_url: "http://127.0.0.1:9292/"
+
++ Apache の設定
+
+  # cd /etc/apache2/conf.d
+  # vi gitlab.conf
+
+  <VirtualHost *:443>
+      ServerName gitlab.example.com
+    # ポートを3000から9292に変更
+    ProxyPass / http://127.0.0.1:9292/
+    ProxyPassReverse / http://127.0.0.1:9292/
+    ProxyPreserveHost On
+  ...
+
+  // Apache を再起動
+  # /etc/init.d/apache2 restart
+
+=== init スクリプトの更新
+  # rm /etc/init.d/gitlab
+  # curl --output /etc/init.d/gitlab https://raw.github.com/gitlabhq/gitlab-recipes/5-1-stable/init.d/gitlab
+  # chmod +x /etc/init.d/gitlab
+
+=== gitlab インスタンスの起動
+  # service gitlab start
+
+=== Mysql 権限の変更
+  # mysql -u root -p
+  # mysql> GRANT LOCK TABLES ON `gitlabhq_production`.* TO 'gitlab'@'localhost';
+  # mysql> \q
+
+=== 確認
+ブラウザから gitlab の動作を確認します。
+
+== GitLab5.1 から 5.2 へのアップデート
+公式のアップデート手順: ((<https://github.com/gitlabhq/gitlabhq/blob/master/doc/update/5.1-to-5.2.md>))
+
+===  gitlab の停止
+  # service gitlab stop
+
+=== gitlab-shell を更新
+  # cd /home/git/gitlab-shell
+  # sudo -u git -H git fetch
+  # sudo -u git -H git checkout v1.4.0
+
+===  GitLab のソースコードを5.2に更新
+  # cd /home/git/gitlab
+  # sudo -u git -H git fetch
+  # sudo -u git -H git checkout db/schema.rb
+  # sudo -u git -H git checkout v5.2.0
+
+=== バンドルインストール・DBマイグレート
+  # sudo -u git -H bundle install --without development test postgres --deployment
+  # sudo -u git -H bundle exec rake db:migrate RAILS_ENV=production
+
+=== gitlab インスタンスの起動
+  # /etc/init.d/gitlab start
+
+=== 確認
+ブラウザから gitlab の動作を確認します。
+
+== トラブルシューティング
+=== キャッシュファイルのクリア
+ダッシュボードが何も表示されない時に、redis のキャッシュをクリアする
+
+  # cd /home/git/gitlab
+  # sudo -H -u gitlab bundle exec rake cache:clear RAILS_ENV=production
