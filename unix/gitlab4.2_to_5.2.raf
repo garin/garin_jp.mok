@@ -394,7 +394,7 @@ unicorn 用の設定を puma 用の設定に変更します。
   # sudo -u git -H git checkout db/schema.rb
   # sudo -u git -H git checkout v5.2.0
 
-=== バンドルインストール・DBマイグレート
+=== バンドルインストール・ DB マイグレート
   # sudo -u git -H bundle install --without development test postgres --deployment
   # sudo -u git -H bundle exec rake db:migrate RAILS_ENV=production
 
@@ -405,8 +405,84 @@ unicorn 用の設定を puma 用の設定に変更します。
 ブラウザから gitlab の動作を確認します。
 
 == トラブルシューティング
-=== キャッシュファイルのクリア
-ダッシュボードが何も表示されない時に、redis のキャッシュをクリアする
+私が GitLab アップデート時に遭遇した問題点と解決方法です。
+
+=== git (clone|pull|push) コマンド で fatal: The remote end hung up unexpectedly が発生する。
++ 問題
+git コマンドで gitlab に接続すると以下いずれかのエラーが表示される。
+
+  $ git clone git@gitlab.example.com:test.git
+  ssh: fatal: The remote end hung up unexpected
+    $ git clone git@git.pne.jp:yoshino/opsa-2013-002-patches
+    Cloning into 'opsa-2013-002-patches'...
+    fatal: The remote end hung up unexpectedly
+or
+
+
+  $ git clone git@gitlab.example.com:test.git
+  Cloning into 'test'...
+  /usr/local/lib/ruby/1.9.1/net/http.rb:763:in `initialize': Connection refused - connect(2) (Errno::ECONNREFUSED)
+          from /usr/local/lib/ruby/1.9.1/net/http.rb:763:in `open'
+          from /usr/local/lib/ruby/1.9.1/net/http.rb:763:in `block in connect'
+
++ 原因
+GitLab5.0 から5.1へのアップデートの際に、gitlab-shell の接続先を unicorn の3000/tcp から puma の9292/tcp に変更していなかった。
+
++ 解決
+gitlab-shell の API 接続先を unicorn から puma に変更。
+
+  # cd /home/git/gitlab-shell
+  # vi config.yml
+  # gitlab_url: "http://git.pne.jp/"
+  gitlab_url: "http://127.0.0.1:9292/"
+
+  # /etc/init.d/gitlab restart
+
+
+=== ダッシュボードキャッシュの未クリア
++ 問題
+WebUI のダッシュボード(https://gitlab.example.com/dashboard)のアクティビティに何も表示されない。または更新されない。
+
++ 問題
+radis-server のキャッシュがうまく削除できず残ってしまうことがある。
+
++ 解決
+redis-server のキャッシュを手動で削除する
 
   # cd /home/git/gitlab
   # sudo -H -u gitlab bundle exec rake cache:clear RAILS_ENV=production
+
+=== ブラウザに「500 We're sorry, but something went wrong.」と表示される
++ 問題
+ブラウザでアクセスすると「500 We're sorry, but something went wrong.」が表示される
+
++ 原因
+一般的なエラーなのでさまざまな原因が考えられますが、以下で解決するかもしません
+
++ 解決
+* Apache を再起動する
+* gitlab と sidekiq のプロセスを kill して init スクリプトを再実行する
+
+=== Background Jobs の sidekiq が動作しない
++ 問題
+
+GitLabのバックグラウンドの sidekiq が動作していない
+
++ 解決
+* sidekiq のプロセスが動作していない場合
+  * gitlab の init スクリプトを実行して sidekiq のプロセスを起動する
+* redis-server が 2.4.15 になっていない場合
+  * 「((<Debian6 で gitlab 4.0 を 4.2 までアップデートする|http://garin.jp/doc/unix/gitlab4.0_to_4.2>))」の「((<事前準備|http://garin.jp/doc/unix/gitlab4.0_to_4.2#raf-head2-3>))」を参考に redis-server 2.4.15 をインストールする
+
+=== Gitリポジトリの File ページが "Loading commit data" で完了しない問題
++ 問題
+プロジェクトの「Files」タブにあるファイルのステータス(Last UpdateやLast Commit)が "Loading commit data" のまま表示が完了しない。
+参考:((<https://groups.google.com/forum/?fromgroups#!topic/gitlabhq/zOVU2Br5xqE>))
+
++ 原因
+gitコマンドのバージョンが古いと発生する。
+
++ 解決
+git コマンドをDebian6標準の1.7.2.5 からバックポート版の 1.7.10.4 にアップデートする。
+
+「((<Debian6 で gitlab 4.0 を 4.2 までアップデートする|http://garin.jp/doc/unix/gitlab4.0_to_4.2>))」の「((<事前準備|http://garin.jp/doc/unix/gitlab4.0_to_4.2#raf-head2-3>))」を参考。
