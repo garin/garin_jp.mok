@@ -219,7 +219,7 @@ init スクリプトで gitlab と sidekiq を起動し、Apache を再起動し
   * ((<バックポート版 redis のインストール>))を参考に redis-server 2.4.15 をインストールする
 
 == つづき
-* ((<Debian6 で gitlab 4.2 を 5.2 までアップデートする|http://garin.jp/doc/unix/gitlab4.2_to_5.2>))」
+* ((<Debian6 で gitlab 4.2 を 5.2 までアップデートする|http://garin.jp/doc/unix/gitlab4.2_to_5.2>))
 
 == 参考 URL
 * gitolite:((<https://github.com/sitaramc/gitolite>))

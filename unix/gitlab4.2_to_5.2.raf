@@ -6,12 +6,13 @@
 # description: Debain 6.0 で gitlab4.2 を 5.2にアップデートする手順
 # tag : gitlab
 # date   : 2013-06-01
-# update : 2013-06-01
+# update : 2013-06-02
 # version: 0.1.0
 # history:
 #   0.1.0: 初版
+#   0.1.1: トラブルシューティングの項を追加
 
-= Debian6 で gitlab 4.2 を 5.2 までアップデートする
+= Debian 6 で gitlab 4.2 を 5.2 にアップデートする
 == 概要
 Debian 6(squeeze) + Apache + LDAP 認証の環境で稼動している GitLab 4.2 を GitLab 5.2 にアップデートします。
 
