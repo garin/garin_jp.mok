@@ -1,0 +1,36 @@
+# creator : がりん <garin54@gmail.com>
+# publisher: garin.jp
+# language: ja
+# rights: (c) 2013 garin.jp
+# license: CC BY-SA 3.0
+# description:
+# tag : vagrant
+# date   : 2013-06-04
+# update : 2013-06-04
+# version: 0.1.0
+# history:
+#   0.1.0: 初版
+= VirtualBox の VBoxHeadless を停止する
+
+top コマンドを眺めていると以下のようなプロセスが稼動しているのを発見しました。
+
+    PID USER      PR  NI  VIRT  RES  SHR S  %CPU %MEM    TIME+  COMMAND
+  10235 hoge      20   0  710m 426m 390m S   4.0  5.4 172:10.27 VBoxHeadless
+
+「VBoxHeadless」。名前からして VirtualBox のプロセスのようです。
+しかも、CPU を4%、メモリを5%も使っています(([Thinkpad X1 Carbon の Intel Core i5-3427U、メモリ8GB の環境で測定]))。
+
+調べてみると リモートデスクトップで使用する VRDP(([Virtual Remote Desktop Protocol]))のデーモンのようです((<http://itpro.nikkeibp.co.jp/article/Keyword/20091030/339837/>))。
+VirtualBox は仮想環境のテストで使用する vagrant で必要なプログラムですが、今は vagrant を起動していません。
+vagrant の仮想マシンへの接続は ssh のみで VRDP のデーモンは不要なので止めてしまいます(([が vagrant を実行すると VBoxHeadless は自動で起動します(vagrant を終了すると自動で止まる)]))。
+
+  $ killall VBoxHeadless
+
+
+init スクリプトからも VBoxHeadless を起動する部分をコメントアウトします(init スクリプト自体は vagrant に必要なので残します)。
+
+  # sudo vi /etc/init.d/virtualbox
+  // 以下の行をコメントアウト
+  #test -d /usr/share/doc/virtualbox -a -x /usr/bin/VBoxHeadless || exit 0
+
+これで VBoxHeadless に大事なリソースを取られる心配がなくなりました。
