@@ -6,8 +6,8 @@
 # description: raf は作業手順/マニュアル向けの軽量マークアップ言語です
 # tag : raf
 # date   : 2011-02-26
-# update : 2011-04-10
-# version: 0.1.0
+# update : 2013-11-30
+# version: 0.2.0
 
 
 = raf ドキュメントフォーマット
@@ -105,6 +105,9 @@ raf の仕様を実装した raf パッケージを公開しています。
 また、raf 仕様書でもある racc 文法ファイルも同梱しています。
 
 === raf のバージョン履歴
+:0.1.0 (2013-11-26)
+  新たに Ruby-2.0.0 に対応し、Ruby-1.8.x の対応を終了。
+
 :0.0.3 (2011-04-11)
   いくつかの細かい修正(主に誤植)。
 
@@ -729,20 +732,12 @@ raf フォーマットのサンプルです。
 
 青空文庫「((<吾輩は猫である|http://www.aozora.gr.jp/cards/000148/card789.html>))」より抜粋。
 
-
-
 === 公開されている raf ドキュメント
 ==== garin.jp
 「((<garin.jp:ドキュメント|http://garin.jp>))」の文章はすべて raf フォーマット形式のファイルを公開しています。
 raf フォーマット版をダウンロードするには各ドキュメントページの一番下にある[((<raf フォーマット|http://garin.jp/raf/Software/raf.raf>))]というリンクをクリックしてください。
 
-+ garin.jp で公開している raf フォーマットのドキュメント(一部)
-* raf ドキュメントフォーマット [((<HTML 版|http://garin.jp/doc/Software/raf>))|((<raf 版|http://garin.jp/raf/Software/raf.raf>))]
-* EBS のサイズを変更する方法 [((<HTML 版|http://garin.jp/doc/AmazonEC2/ebs_file_size_chenage>))|((<raf 版|http://garin.jp/raf/AmazonEC2/ebs_file_size_chenage.raf>))]
-* X Window System のコピー&ペースト環境を統一する [((<HTML 版|http://garin.jp/doc/Linux/xwindow_clipboard>))|((<raf 版|http://garin.jp/raf/Linux/xwindow_clipboard.raf>))]
-
 === 参照情報
-
 + パッケージ・ソースの配布元
 raf のパッケージとソースは以下のサイトで配布しています。
 * ソースコード: ((<github : garin/raf|https://github.com/garin/raf>))
