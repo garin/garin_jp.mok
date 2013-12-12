@@ -1,11 +1,11 @@
-# creator : がりん <garin54@gmail.com>
+# author : がりん <garin54@gmail.com>
 # publisher: garin.jp
 # language: ja
 # rights: (c) 2013 garin.jp
 # license: CC BY-SA 3.0
 # description: Debain 6.0 で gitlab4.2 を 5.2にアップデートする手順
 # tag : gitlab
-# date   : 2013-06-01
+# create : 2013-06-01
 # update : 2013-06-02
 # version: 0.1.0
 # history:

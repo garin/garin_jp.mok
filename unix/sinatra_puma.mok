@@ -1,0 +1,14 @@
+# creator : がりん <garin54@gmail.com>
+# publisher: garin.jp
+# language: ja
+# rights: (c) 2013 garin.jp
+# license: CC BY-SA 3.0
+# description:
+# tag : sinatra puma
+# date   : 2013-12-03
+# update : 2013-12-03
+# version: 0.1.0
+# history:
+#   0.1.0: 初版
+= sinatra を puma で動かす
+((@puma=((<puma|http://puma.io/>))@)) は ((@ruby=((<Ruby|http://www.ruby-lang.org/ja/>))@)) 製の Racc 用 Web サーバです。

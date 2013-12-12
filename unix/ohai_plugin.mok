@@ -1,11 +1,11 @@
-# creator : がりん <garin54@gmail.com>
+# author : がりん <garin54@gmail.com>
 # publisher: garin.jp
 # language: ja
 # rights: (c) 2013 garin.jp
 # license: CC BY-SA 3.0
 # description: ohai のプラグインを作成する
 # tag : chef ohai
-# date   : 2013-05-23
+# create : 2013-05-23
 # update : 2013-05-23
 # version: 0.1.1
 # history:
@@ -90,7 +90,7 @@ chef のレシピやテンプレート内では node['プラグイン名'] で�
 
   $ cd /path/to/cookbook/templates
   $ sudo vi update.txt.erb
-  update time : <%= node['jikan'] %>
+  update time : <%%= node['jikan'] %>
 
 == サーバのプライベートな情報を取得する ohai プラグイン
 chef-solo にはサーバ上にあるプライベートな情報を取得する仕組みがありません。
@@ -128,7 +128,7 @@ chef のレシピから値を読み取るには node['private']['キー'] を指
   $ sudo vi database.conf.erb
   host : localhost
   user : root
-  password : <%= node['private']['mysql_root_password'] %>  # private.yaml の himituNoPass が挿入される
+  password : <%%= node['private']['mysql_root_password'] %>  # private.yaml の himituNoPass が挿入される
 
 == 参考 URL
 * ((<公式の Ohai 解説|http://docs.opscode.com/ohai.html#create-ohai-plugins>))

@@ -1,0 +1,204 @@
+# author : がりん <garin54@gmail.com>
+# publisher: garin.jp
+# language: ja
+# rights: (c) 2013 garin.jp
+# license: CC BY-SA 3.0
+# description:
+# tag : mok mok2html
+# create : 2013-12-12
+# update : 2013-12-12
+# version: 0.1.0
+= mok2html で mok のドキュメントを HTML に変換する
+
+== 概要
+=== mok2html とは?
+((@mok2html=((<mok2html|mok2html>))@)) は ((<mok フォーマット|mok>))のドキュメントを HTML に変換する Ruby 製のユーティリティです。
+mok の書式については((<mokフォーマット|mok>))を参照してください。
+
+== インストール
+mok2html コマンドは Ruby の gem パッケージで配布しています。
+mok メタパッケージに同梱されているので、mok パッケージをインストールすれば関連パッケージと一緒に mok2html をインストールできます。
+
+++ メタパッケージでインストール
+  $ gem install mok
+
+また、mok2hmtl だけを個別にインストールすることも可能です。
+++ 個別にインストール
+  $ gem install mok2html
+
+== 使い方
+=== 基本的な使い方
+==== mok ドキュメント を HMTL に変換
+mok フォーマットで書いたドキュメントを HTML に変換するには mok2hmtl にドキュメントのファイル名を指定します。
+mok2html は変換結果を標準出力に出力するので、結果を保存するにはファイルにリダイレクトします。
+
+  $ mok2html sample.mok > sample.html
+
+==== バージョンの確認
+mok2html 自身のバージョンと、変換パーサである mok-parser それぞれのバージョンを確認できます。
+
+  // mok2html のバージョン確認
+  $ mok2html -v
+  mok2html 0.1.0 (2013-12-10)
+
+  // 使っている mok-parser のバージョン確認
+  $ mok2html -V
+  mok-parser: 0.3.0 (2013-12-10)
+
+==== ヘルプ
+mok2html で有効なオプションは --help オプションで確認できます。
+
+  $ mok2html --help
+  Usage: mok2html [options] file
+      -c, --css file                   HTMLに埋め込むスタイルシートを指定
+      -j, --javascript file            HTMLに埋め込むJavaScriptを指定
+      -L, --language LANG              言語(デフォルトは ja 。ドキュメント側で指定されていればそちらを優先)
+          --[no-]index                 目次を生成する(デフォルトは生成する)
+          --[no-]metadata              メタ情報を出力しない(デフォルトは出力する)
+      -q, --quiet                      本文だけを出力する(ヘッダやフッタは出力しない)
+      -s, --reference_extension string リファレンス記法で「.%」を置換する拡張子(デフォルト .html)
+      -m, --media_directory directory  画像や動画などのメディアファイルを配置する基底ディレクトリ
+          --custom_element file        HTMLタグをカスタマイズするためのRubyファイル)
+      -V, --parser-version             使用する mok-parser のバージョンを表示
+
+=== 便利な使い方
+mok2html の便利な使い方をいくつか紹介します。
+ここで紹介されていない使い方はコマンドヘルプやソースコードを参照してください。
+
+==== スタイルシートを指定する
+変換先のHTMLに埋め込むCSS(スタイルシート)を指定できます。
+指定したスタイルシートは <style type="text/css"> タグの中に埋め込まれます。
+
+  // CSSのファイルを作成
+  $ vi ~/css/main.css
+  h1 { font-size : 200%; }
+
+  // CSSを指定してHTMLに変換する
+  $ mok2html --css ~/css/main.css sample.mok > sample.html
+  $ less sample.html
+  <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="ja">
+  ...
+  <style type="text/css"><!--
+  h1 { font-size : 200%; }      # ここに埋め込まれる
+  --></style>
+  ...
+
+※指定できるスタイルシートは1つまでです。
+
+==== JavaScriptを指定する
+変換先のHTMLに埋め込むCSS(スタイルシート)を指定できます。
+指定した JavaScript は <script type="text/javascript"> タグの中に埋め込まれます。
+
+  // JavaScriptを指定してHTMLに変換する
+  $ mok2html --javascript ~/js/main.js sample.mok > sample.html
+  $ less sample.html
+  <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="ja">
+  ...
+  <script type="text/javascript">
+  window.onload = prettyPrint;
+  </script>
+  ...
+
+※指定できるJavaScriptのファイルは1つまでです。
+
+==== ヘッダやフッタを出力しない
+--quite オプションを使うと、<html>や<body>のヘッダを出力しないように指定できます。
+変換したHTMLファイルをなんからのWebサイトに埋め込むときやHTMLの出力を確認するときなどに便利です。
+
+  // 標準ではHTMLヘッダが出力される
+  $ mok2html sample.mok
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="ja">
+  ...
+  <h1>mok sample</h1>
+
+  // --quiteオプションでHTMLヘッダが出力を抑制する
+  $ mok2html --quite sample.mok
+  <h1>mok sample</h1>
+  ...
+
+== 設定
+mok2html コマンドは起動時に設定ファイルとしてホームディレクトリにある ~/.mok2html.yaml を読み込みます。
+設定ファイルにはコマンドラインオプションのロングネーム(css, javascript, reference_extension など)をそのまま指定できます。
+
+=== 設定ファイルの例
+++ ~/.mok2html.yaml
+  # YAML形式なので実際に設定を有効にするにはコメントアウト(#)を解除してください。
+  # コンバート時にHTMLファイルに埋め込むスタイルシート(デフォルト:"")
+  #css: "~/css/main.css"
+
+  # コンバート時にHTMLファイルに埋め込むjavascript(デフォルト:"")
+  #js: "~/css/main.js"
+
+  # リファレンス記法の「.%」を変換する拡張子(デフォルト:.html)
+  #reference_extension: ".html"
+
+  # 画像やビデオ、音声などを配置するディレクトリ(デフォルト:"")
+  #media_directory: "/usr/local/media"
+
+  # HTMLタグをカスタマイズするためのRubyファイル(デフォルト:"")
+  #custom_element: "/home/myname/mok2html/mycustom.rb"
+
+  # ドキュメントのフォーマット(デフォルト:ja)
+  #language: "ja"
+
+  # 目次(index)を作成するかどうか(デフォルト: true)
+  #index: true
+
+  # メタデータを作成するかどうか(デフォルト: true)
+  #metadata: true
+
+  # HTMLヘッダを出力"しない"かどうか(デフォルト: false)
+  #quiet: false
+
+=== 設定ファイルの設定を無効化する
+設定ファイルで指定したCSSを使いたくない時など、設定ファイルの設定を無効にするには、コマンドラインオプションで上書きします。
+
+  // 設定ファイルにcssの設定があることを確認
+  $ grep 'css:' ~/.mok2html.yaml
+  css: "~/css/main.css"
+
+  // そのまま実行すると設定ファイルのCSSが有効になる
+  $ mok2html sample.mok
+  ...
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <style type="text/css"><!--
+  h1 { font-size : 200%; }      # CSSを埋め込んでいる
+  --></style>
+  <title>mok sample</title>
+  ...
+
+--
+  // コマンドラインオプションで上書きすると設定を無効化できる
+  $ mok2html --css "" sample.mok
+  ...
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  # CSSの指定がなくなった
+  <title>mok sample</title>
+  ...
+
+# == 高度な使い方
+# === HTMLのタグを変更する
+# * ((<HTMLのタグを変更する|mok2html_custom.%>))
+#
+# === youtube や slideshareを埋め込む
+# * ((<youtube や slideshare を埋め込む|mok2html_youtube_slideshare.%>))
+#
+# === twitter bootstrap と google prettify を有効にする
+# * ((<twitter bootstrap と google prettify を有効にする|mok2html_bootstrap_prettify.%>))
+
+== 参考リンク
+=== ソースコード
+* mok: ((<http://github.com/garin/mok>))
+* mok-parser: ((<http://github.com/garin/mok-parser>))
+* raf2html: ((<http://github.com/garin/mok2html>))
+
+=== ドキュメント
+* mok リファレンス: ((<http://garin.jp/doc/mok/mok>)) (この文章です)
+* raf2html マニュアル: ((<http://garin.jp/doc/mok/raf2html>))
+
+=== Gem パッケージ
+* mok: ((<https://rubygems.org/gems/mok>))
+* mok-parser: ((<https://rubygems.org/gems/mok-parser>))
+* raf2html: ((<https://rubygems.org/gems/mok2html>))

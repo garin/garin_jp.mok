@@ -1,5 +1,5 @@
-# creator : がりん <garin54@gmail.com>
-# date   : 2011-05-25
+# author : がりん <garin54@gmail.com>
+# create : 2011-05-25
 # update : 2011-05-26
 # language: ja
 # rights: (c) 2011 garin.jp

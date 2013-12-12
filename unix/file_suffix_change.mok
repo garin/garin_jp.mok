@@ -1,10 +1,10 @@
-# creator : 我燐(がりん) <garin54@gmail.com>
-# date : 2011-04-04
+# author : がりん <garin54@gmail.com>
+# create : 2011-04-04
 # update : 2011-04-04
 # rights: (c) 2011 garin.jp
 # version: 1.0.0
 # publisher: garin.jp
-# tag : tips shell
+# tag : shell
 = ファイルの拡張子を変更する
 + シェルのパラメータ展開を使う
 シェルコマンド(bash,zsh)のパラメータ展開($)とパターン削除(%)機能を使うと簡単に拡張子を変更できます。
@@ -32,4 +32,3 @@ rename コマンドと使うとより簡単に拡張子を変更できます。
 ++ rename で .jpeg はたは .JPG ファイルを .jpg に変換する
 
   $ rename 's/\.jpe?g$/.jpg/i' *
-

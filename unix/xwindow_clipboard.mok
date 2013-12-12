@@ -1,16 +1,13 @@
-# creator : 我燐(がりん) <garin54@gmail.com>
+# creator : garin (garin54@gmail.com)
 # date : 2009-12-06
 # update : 2013-05-27
-# rights: (c) 2009 garin.jp
 # version: 1.1.0
-# publisher: garin.jp
 # tag : linux mlterm xclip screen firefox
 = X Window System のコピー&ペースト環境を統一する
-#update : 2010-01-31
+
 == 概要
 === 目的
-X Window System 上の "Emacs", "mlterm(+screen)", "Firefox" の3つのアプリケーション(([Emacs ・ mlterm+screen ・ Firefox はがりんの三大常用アプリケーションです。これらがなければ生活できません]))の間で文字列のコピーとペースト(貼り付け)ができるようにします。
-
+X Window System 上の "(({Emacs}))", "mlterm(+screen)", "Firefox" の3つのアプリケーション(([Emacs ・ mlterm+screen ・ Firefox はがりんの三大常用アプリケーションです。これらがなければ生活できません]))の間で文字列のコピーとペースト(貼り付け)ができるようにします。
 
 === 何が問題か?
 X Window System には 文字列のコピー&ペースト として「セクション」と呼ばれる機能を提供しています(([もうひとつ、カットバッファという機能もありますが、X10 からの機能の為、時代送れであり今回の環境では使用しないので割愛]))。

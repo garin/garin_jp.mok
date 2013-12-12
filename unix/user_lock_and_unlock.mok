@@ -1,10 +1,10 @@
-# creator : 我燐(がりん) <garin54@gmail.com>
-# date : 2011-04-04
+# author : がりん <garin54@gmail.com>
+# create : 2011-04-04
 # update : 2011-04-04
 # rights: (c) 2011 garin.jp
 # version: 1.0.0
 # publisher: garin.jp
-# tag : tips unix
+# tag : unix
 = ユーザを一時的にロックする
 
 usermod コマンドを使うと、ユーザ情報を削除しないで一時的にロックできます。
