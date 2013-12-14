@@ -6,8 +6,8 @@
 # description:
 # tag : mok mok2html
 # create : 2013-12-12
-# update : 2013-12-12
-# version: 0.1.0
+# update : 2013-12-14
+# version: 0.1.1
 = mok2html で mok のドキュメントを HTML に変換する
 
 == 概要
@@ -145,8 +145,11 @@ mok2html コマンドは起動時に設定ファイルとしてホームディ�
   # リファレンス記法の「.%」を変換する拡張子(デフォルト:.html)
   #reference_extension: ".html"
 
+  # リンク記法((<..>))のファイルを配置する基底ディレクトリ(デフォルト:なし)
+  #reference_base_directory: ""
+
   # 画像やビデオ、音声などを配置するディレクトリ(デフォルト:"")
-  #media_directory: "/usr/local/media"
+  #media_base_directory: "/usr/local/media"
 
   # HTMLタグをカスタマイズするためのRubyファイル(デフォルト:"")
   #custom_element: "/home/myname/mok2html/mycustom.rb"
