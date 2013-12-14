@@ -127,9 +127,9 @@ mok で文章を書くはこのリファレンスを確認にしてください�
 このリファレンスでは、下記の mok を対象とします。
 ほかのバージョンでは使用できない機能や、動作の異なる場合があります。
 
-* mok-1.1.0
-* mok-parser-0.3.0 (mok に同梱)
-* mok2html-0.1.0 (mok に同梱)
+* mok-1.1.1
+* mok-parser-0.3.1 (mok に同梱)
+* mok2html-0.1.1 (mok に同梱)
 
 === 拡張子・文字コード
 
@@ -415,16 +415,29 @@ imma さんが((<http://morguefile.com>))で公開している((<DSC_0465aj.JPG|
 他のフォーマットに変換した時のメディアファイルを配置しておくディレクトリを指定することができます。
 指定方法は変換ツールにより異なりますが、((@mok2html@)) はコマンドラインか設定ファイルで指定が可能です。
 
-  $ mok2html --media_directory "/usr/local/media" $MOK_FILE
+  $ mok2html --media_base_directory "/usr/local/media" $MOK_FILE
 
-上記ようのオプションを指定して変換を実行すると、ファイルパスに自動で /usr/local/media を付加します。
+media_base_directory オプションを指定して変換を実行すると、マルチメディア記法(('(($..$))'))のファイルパスに /usr/local/media を付加します。
 
   (('(($test.png$))')) #=> <img src="/usr/local/media/test.png">
 
-メディアディレクトリの設定はローカルのファイルパスに対してのみ有効です。
-http://, file:// のような URI 形式で指定している場合にはファイルディレクトリを付加しません。
+メディアディレクトリの設定は URI, ルートディレクトリ、カレントディレクトリ 以外のローカルパスに対してのみ有効です。
+※media_base_direcotry のデフォルト値が ""(空) です。
 
-  (('(($http://example.com/test.png$))')) #=> <img src="http://example.com/test.png">
+++ ベースディレクトリの変換リスト
+
+media_base_direcotry オプションを (({/opt/mok/media})) と設定した場合、リンクの記述を次のように変換します。
+
+| *分類*                  | *ドキュメントのパス*                        | 変換有無 | *出力するパス*                  |
+| ファイルのみ            | (($test.png$))                 | ○       | /opt/mok/media/test.png        |
+| 相対パス                | (($images/test.png$))          | ○       | /opt/mok/media/images/test.png |
+| ルートディレクトリ      | (($/test.png$))                | ×       | /test.png                      |
+| カレントディレクトリ    | (($./test.png$))               | ×       | ./test.png                     |
+| URI(ファイルプロトコル) | (($file://test.png$))          | ×       | file://test.png                |
+| URI(HTTPプロトコル) | (($http://garin.jp/test.png$)) | ×      | http://garin.jp/test.png                               |
+
+ヒント:ファイルをカレントディレクトリ(./)から相対パスで記述しておくと、media_base_direcotry オプションの設定・未設定にかかわらず、相対パスで出力します。
+
 
 === 整形済みテキスト
 行頭を半角スペースを2つ空けると整形済みテキストになります。
@@ -620,7 +633,7 @@ mok は ((<org-mode|http://orgmode.org/>)) などで使われているヘッダ�
 === リンク
 ==== 外部リンク
 外部のファイルや URI にリンクを貼ります。
-(('((<パス>))')) または (('((<タイトル=パス>))')) で記述します。
+(('((<パス>))')) または (('((<タイトル|パス>))')) で記述します。
 
 + ローカルファイル
 ++ ローカルファイルの記述例
@@ -646,6 +659,10 @@ URI 形式ではファイルディレクトリを付加しません。
 
   # mok2html で HTML に変換する場合(.% を .html に変換する)
   ((<sample.%>)) #=> <a href="sample.html">sample.html</a>
+
++ リンクのファイルベースディレクトリ
+((=マルチメディアのファイルディレクトリ=)) と同様に、リンク記法にもベースディレクトリを指定する、 reference_base_directory オプションがあります。
+reference_base_directory オプションを指定すると ((=ベースディレクトリの変換リスト=)) の規則にそって、リンクパスを変換します。
 
 ==== ラベル(ドキュメント内リンク)
 ラベルはそのドキュメントだけで有効な HTML のハイパーテキストのようなリンク機能を提供します。

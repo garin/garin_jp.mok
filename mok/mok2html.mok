@@ -23,7 +23,7 @@ mok メタパッケージに同梱されているので、mok パッケージを
   $ gem install mok
 
 また、mok2hmtl だけを個別にインストールすることも可能です。
-++ 個別にインストール
+++ mok2htmlだけをインストール
   $ gem install mok2html
 
 == 使い方
@@ -50,14 +50,18 @@ mok2html で有効なオプションは --help オプションで確認できま
 
   $ mok2html --help
   Usage: mok2html [options] file
-      -c, --css file                   HTMLに埋め込むスタイルシートを指定
-      -j, --javascript file            HTMLに埋め込むJavaScriptを指定
+      -c, --css file[,file,..]         HTMLに埋め込むスタイルシートを指定
+      -j, --javascript file[,file,..]  HTMLに埋め込むJavaScriptを指定
       -L, --language LANG              言語(デフォルトは ja 。ドキュメント側で指定されていればそちらを優先)
+          --[no-]config [file]         設定ファイルを指定、または設定ファイルを使用しない(デフォルト:~/.mok2html)
           --[no-]index                 目次を生成する(デフォルトは生成する)
           --[no-]metadata              メタ情報を出力しない(デフォルトは出力する)
       -q, --quiet                      本文だけを出力する(ヘッダやフッタは出力しない)
       -s, --reference_extension string リファレンス記法で「.%」を置換する拡張子(デフォルト .html)
-      -m, --media_directory directory  画像や動画などのメディアファイルを配置する基底ディレクトリ
+      -R directory,                    リンク記法((<..>))のファイルを配置する基底ディレクトリ(デフォルト:なし)
+          --reference_base_directory
+      -M directory,                    画像や動画などのメディア記法(($..$))のファイルを配置す る基底ディレクトリ(デフォルト:なし)
+          --media_base_directory
           --custom_element file        HTMLタグをカスタマイズするためのRubyファイル)
       -V, --parser-version             使用する mok-parser のバージョンを表示
 
@@ -83,7 +87,11 @@ mok2html の便利な使い方をいくつか紹介します。
   --></style>
   ...
 
-※指定できるスタイルシートは1つまでです。
++ 複数のスタイルシートを指定する
+複数のスタイルシートを指定するには、スタイルシートを","で区切ります。
+
+  $ mok2html --css ~/css/main.css,~/css/sub.css sample.mok > sample.html
+
 
 ==== JavaScriptを指定する
 変換先のHTMLに埋め込むCSS(スタイルシート)を指定できます。
@@ -99,7 +107,10 @@ mok2html の便利な使い方をいくつか紹介します。
   </script>
   ...
 
-※指定できるJavaScriptのファイルは1つまでです。
++ 複数のJavaScriptを指定する
+複数のJavaScriptを指定するには、JavaScriptを","で区切ります。
+
+  $ mok2html --js ~/js/main.js,~/js/sub.js sample.mok > sample.html
 
 ==== ヘッダやフッタを出力しない
 --quite オプションを使うと、<html>や<body>のヘッダを出力しないように指定できます。
@@ -153,7 +164,7 @@ mok2html コマンドは起動時に設定ファイルとしてホームディ�
   #quiet: false
 
 === 設定ファイルの設定を無効化する
-設定ファイルで指定したCSSを使いたくない時など、設定ファイルの設定を無効にするには、コマンドラインオプションで上書きします。
+設定ファイルで指定したCSSを使いたくない時など、設定ファイルの設定を無効にするには、コマンドラインオプションで --no-config を指定します。
 
   // 設定ファイルにcssの設定があることを確認
   $ grep 'css:' ~/.mok2html.yaml
@@ -170,8 +181,8 @@ mok2html コマンドは起動時に設定ファイルとしてホームディ�
   ...
 
 --
-  // コマンドラインオプションで上書きすると設定を無効化できる
-  $ mok2html --css "" sample.mok
+  // --no-config オプション設定ファイルを読み込まない
+  $ mok2html --no-config
   ...
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   # CSSの指定がなくなった
@@ -185,8 +196,11 @@ mok2html コマンドは起動時に設定ファイルとしてホームディ�
 # === youtube や slideshareを埋め込む
 # * ((<youtube や slideshare を埋め込む|mok2html_youtube_slideshare.%>))
 #
-# === twitter bootstrap と google prettify を有効にする
-# * ((<twitter bootstrap と google prettify を有効にする|mok2html_bootstrap_prettify.%>))
+# === twitter bootstrap  を有効にする
+# * ((<twitter bootstrap を有効にする|mok2html_bootstrap.%>))
+# === google prettify を有効にする
+# * ((< google prettify を有効にする|mok2html_bootstrap.%>))
+
 
 == 参考リンク
 === ソースコード
